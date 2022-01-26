@@ -1,0 +1,220 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans&family=IBM+Plex+Serif&display=swap');
+
+:root {
+    --black: #171321;
+    --dkblue: #0d314b;
+    --plum: #4b0d49;
+    --hotmag: #ff17e4;
+    --magenta: #e310cb;
+    --aqua: #86fbfb;
+    --white: #f7f8fa;
+    --font-size: 1.3rem;
+    --mono: "IBM Plex Serif", "Oxygen mono", monospace;
+    --sans: "IBM Plex Sans", Oxygen, sans-serif;
+}
+
+.gradient-line {
+    /* background: rgb(255,23,228); */
+    background: linear-gradient(90deg, rgba(255,23,228,1) 0%, rgba(134,251,251,1) 100%);
+    height: 2px;
+}
+html {
+    box-sizing: border-box;
+}
+*,
+*::before,
+*::after {
+    box-sizing:inherit;
+}
+body {
+    /* body tag has some padding and margin by default.
+    It often causes problems*/
+    padding:0;
+    margin:0;
+    font-family: var(--sans);
+    background-color: var(--black);
+    color: var(--white);
+    font-size: var(--font-size);
+}
+h1, h2, h3 {
+    /* Margins assigned to all headings is 1em (width of an "m" letter).
+    If I have two elements coming together, and I have padding of 1rem, the distance between those two elements is 2 rem.
+    But, if I have 1rem of margin for each element, the total distance between them is not 2rem, but 1rem. 
+    Margin collapses in vertical direction. In horizontal direction, it acts just as expected(1+1=2) though.*/
+    margin:0;
+}
+a {
+    /* If you want to make an accessible webpage. 
+    If you have text *inside a text**, you should underline it by default. 
+    It is a way to explain that the given part is a link. 
+    Helps colorblind people navigate it. 10% people are colorblind. */
+    color: var(--magenta);
+}
+a:hover {
+    color: var(--hotmag);
+    text-decoration:none;
+}
+#intro {
+    /* trbl top right bottom left trouble :-) */
+    padding: 4rem 1rem 10rem 1rem;
+    max-width: 1200px;
+    /* margin: 0 auto; trick to center align stuff*/
+    margin: 0 auto;
+}
+#intro p {
+    font-size: 1rem;
+    /*Don't add a unit of measure in line height. 
+    If you do, you make it absolute. When you take the unit off,
+     it will change in proportion to the font-size*/
+    line-height: 1.5;
+}
+#intro .name {
+    font-family: var(--mono);
+}
+.name .name-span {
+    font-family: var(--sans);
+    font-size: 4rem;
+    color: var(--aqua);
+    display: block;
+}
+#intro h2 {
+    font-size: 4rem;
+    font-weight: normal;
+}
+#contact {
+    text-align: center;
+    max-width: 400px;
+    align-content: center;
+    margin: 0 auto;
+    padding: 2rem 2rem;
+}
+#contact p{
+    font-size:1rem;
+}
+.contact-div {
+    background-color: var(--plum);
+}
+.contact-links {
+    padding: 0 15%;
+    align-self: center;
+    display: flex;
+    /* To align horizontally, use justify-content */
+    justify-content: center;
+    /* To align vertically, use align-items */
+    align-items: center;
+    justify-content: space-around;
+}
+.contact-links [class*="fa-"] {
+    font-size: 200%;
+    color: var(--aqua);
+}
+/* #contact p:first-child {
+  margin-top: 3rem;
+} */
+nav {
+    font-family: var(--mono);
+    font-size: 80%;
+    padding: 1rem;
+}
+nav h1 a {
+    /* We could have used "nav h1 ul li a". 
+    It would increase specificity. But we should(subjective)
+     put in as little selectors as possible. It increases readability of
+      the code and they will always be available to be overridden later.*/
+    font-family: var(--sans);
+    /*   font-size: 5rem; */
+}
+nav ul {
+    /* ul and li elements have either some margin or padding by default,
+     which is responsible for indenting your lists */
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-flow: row wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 2rem;
+}
+nav li:first-child {
+    /* This will create a new line for the name 
+    flex-basis (how wide an element is). The difference b/w flex-basis 
+    and width is that flex-basis is a kind-of thing, width is exact. 
+    Also, flex-basis can only be used with flex-box*/
+    flex-basis: 100%;
+    text-align: center;
+    /* Nice debugging trick: border: 1px solid red; */
+}
+nav a {
+    color: var(--white);
+    text-decoration: none;
+    /* By default, the a elements is an inline inline. 
+    In the case of a navbar, we want the link to fill the whole available area. 
+    We set display: block to fill the whole area to be clickable.*/
+    display: block;
+}
+nav [class*="fa-"] {
+    font-size: 150%;
+    color: var(--aqua);
+}
+nav h1 [class*="fa-"] {
+    font-size: 100%;
+    color: var(--aqua);
+}
+nav a:hover,
+nav [class*="fa-"]:hover {
+    color: var(--magenta);
+}
+.resume-button {
+    background-color: var(--magenta);
+    padding: 0.5rem;
+    border-radius: 5px;
+}
+.resume-button:hover {
+    color: var(--white);
+    background-color: var(--hotmag);
+}
+footer {
+    text-align: center;
+    padding: 1rem;
+}
+footer ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 2rem 0;
+    display:flex;
+    flex-flow: row wrap;
+    justify-content: center;
+    gap: 3rem;
+    font-size:3 rem;
+}
+/* @media (min-width: 850px) {  extensive research says 850 is best*/
+@media (min-width: 100px) {
+    nav {
+        max-width:1200px;
+        margin: 0 auto;
+    }
+    nav li:first-child {
+        flex-basis: auto;
+        text-align: left;
+        margin-right: auto;
+    }
+}
+/* .resume-iframe-div {
+    display:block;
+    width: 100%;
+    height: 100%;
+} */
+.resume-iframe {
+    position:fixed;
+    border:none;
+    width: 100%;
+    height: 100%;
+    display:block;
+}
+.under-construction {
+    display:flex;
+    justify-content: center;
+    align-items: center;
+    flex-basis: 100%;
+}
