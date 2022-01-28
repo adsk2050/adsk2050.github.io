@@ -54,6 +54,9 @@ a:hover {
     color: var(--hotmag);
     text-decoration:none;
 }
+img {
+    width: 100%;
+}
 #intro {
     /* trbl top right bottom left trouble :-) */
     padding: 4rem 1rem 10rem 1rem;
@@ -188,18 +191,6 @@ footer ul {
     gap: 3rem;
     font-size:3 rem;
 }
-/* @media (min-width: 850px) {  extensive research says 850 is best*/
-@media (min-width: 100px) {
-    nav {
-        max-width:1200px;
-        margin: 0 auto;
-    }
-    nav li:first-child {
-        flex-basis: auto;
-        text-align: left;
-        margin-right: auto;
-    }
-}
 /* .resume-embed-div {
     display:block;
     width: 100%;
@@ -212,9 +203,119 @@ footer ul {
     height: 100%;
     display:block;
 }
-.under-construction {
+/* .under-construction {
     display:flex;
     justify-content: center;
     align-items: center;
     flex-basis: 100%;
+} */
+article {
+    gap: 1rem;
+}
+#projects {
+    /* background-color: var(--dkblue); */
+    padding: 4rem 1rem;
+}
+#projects h2 {
+    font-size: 2.5rem;
+    margin-bottom: calc(2.5rem * 1.5)
+}
+#projects h3 {
+    color: var(--aqua);
+}
+#projects h4 {
+    font-size:1rem;
+    font-family: var(--mono);
+    margin: 0;
+}
+.black-box {
+    background-color: var(--black);
+    padding: 1rem;
+    border-radius: 10px;
+    color: var(--white);
+    font-size: 1rem;
+    line-height:1.5;
+}
+#projects ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-flow: row wrap;
+    justify-content: flex-start;
+    gap: 1rem;
+    font-size: 1rem;
+}
+#projects img {
+    margin: 2rem 0 4rem 0;
+    border-left: 1px solid var(--aqua);
+    border-top: 1px solid var(--aqua);
+    border-radius: 25px;
+    padding: 1rem;
+}
+#about h2 {
+    font-size: 2.5rem;
+    margin-bottom: calc(2.5rem * 1.5)
+}
+#about p {
+    font-size: 1rem;
+}
+
+/* @media (min-width: 850px) {  extensive research says 850 is best*/
+@media (min-width: 400px) {
+    nav {
+        max-width:1200px;
+        margin: 0 auto;
+    }
+    nav li:first-child {
+        flex-basis: auto;
+        text-align: left;
+        margin-right: auto;
+    }
+}
+@media (min-width: 550px) {
+    #projects{
+        max-width:1200px;
+        margin: 0 auto;
+    }
+    #about{
+        max-width:1200px;
+        margin: 0 auto;
+    }
+    article {
+        display: grid;
+        /* grid-template-columns: 1fr 1fr; */
+        /* The special ability of grid is that it can overlap two 
+        elements on top of each other. Flexbox can't do that */
+        grid-template-columns: repeat(10, 1fr);
+        gap: 1rem;
+    }
+    #projects img {
+        grid-column: 1/6;
+        grid-row: 1/2;
+    }
+    .text {
+        order: 2;
+        text-align: right;
+        grid-column: 5/11;
+        grid-row: 1/2;
+    }
+    #projects ul {
+        /* Had to do this because earlier we had assigned flex start
+         to ul before in the css code, so need to change it again */
+        justify-content: flex-end;
+    }
+    #projects .reverse img {
+        grid-column: 6/11;
+        grid-row: 1/2;
+    }
+    #projects .reverse .text {
+        order: 2;
+        text-align: left;
+        grid-column: 1/7;
+        grid-row: 1/2;
+    }
+    #projects .reverse ul {
+        justify-content: flex-start;
+    }
 }
