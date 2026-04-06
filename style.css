@@ -260,6 +260,24 @@ article {
 #about p {
     font-size: 1rem;
 }
+#about h3 {
+    color: var(--aqua);
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+#about .skills-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0.5rem 0;
+    font-size: 1rem;
+    line-height: 2;
+}
+#about .skills-list li {
+    background-color: var(--dkblue);
+    padding: 0.3rem 0.8rem;
+    border-radius: 5px;
+    margin-bottom: 0.3rem;
+}
 
 /* @media (min-width: 850px) {  extensive research says 850 is best*/
 @media (min-width: 400px) {
