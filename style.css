@@ -1,6 +1,13 @@
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans&family=IBM+Plex+Serif&display=swap');
 
 :root {
+    --font-size: 1.3rem;
+    --mono: "IBM Plex Serif", "Oxygen mono", monospace;
+    --sans: "IBM Plex Sans", Oxygen, sans-serif;
+}
+
+/* Default: Original */
+[data-theme="original"], :root {
     --black: #171321;
     --dkblue: #0d314b;
     --plum: #4b0d49;
@@ -8,15 +15,87 @@
     --magenta: #e310cb;
     --aqua: #86fbfb;
     --white: #f7f8fa;
-    --font-size: 1.3rem;
-    --mono: "IBM Plex Serif", "Oxygen mono", monospace;
-    --sans: "IBM Plex Sans", Oxygen, sans-serif;
+}
+
+[data-theme="midnight-ocean"] {
+    --black: #0a192f;
+    --dkblue: #112240;
+    --plum: #0a7e8c;
+    --hotmag: #ffbf00;
+    --magenta: #ffd700;
+    --aqua: #64ffda;
+    --white: #e6f1ff;
+}
+
+[data-theme="charcoal-ember"] {
+    --black: #1a1a2e;
+    --dkblue: #16213e;
+    --plum: #e94560;
+    --hotmag: #ff8585;
+    --magenta: #ff6b6b;
+    --aqua: #ffc4a3;
+    --white: #edf2f4;
+}
+
+[data-theme="nordic-frost"] {
+    --black: #2d3436;
+    --dkblue: #3d4f5f;
+    --plum: #0984e3;
+    --hotmag: #a0d2ff;
+    --magenta: #74b9ff;
+    --aqua: #55efc4;
+    --white: #f0f3f5;
+}
+
+[data-theme="obsidian-neon"] {
+    --black: #0d0d0d;
+    --dkblue: #1a1a2e;
+    --plum: #7c3aed;
+    --hotmag: #33ffa1;
+    --magenta: #00ff88;
+    --aqua: #a78bfa;
+    --white: #fafafa;
+}
+
+[data-theme="warm-earth"] {
+    --black: #1c1917;
+    --dkblue: #292524;
+    --plum: #d97706;
+    --hotmag: #fbbf24;
+    --magenta: #f59e0b;
+    --aqua: #86efac;
+    --white: #fef3c7;
 }
 
 .gradient-line {
-    /* background: rgb(255,23,228); */
-    background: linear-gradient(90deg, rgba(255,23,228,1) 0%, rgba(134,251,251,1) 100%);
+    background: linear-gradient(90deg, var(--magenta) 0%, var(--aqua) 100%);
     height: 2px;
+}
+
+/* Theme switcher */
+.theme-switcher {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    z-index: 1000;
+}
+.theme-switcher select {
+    background-color: var(--dkblue);
+    color: var(--white);
+    border: 1px solid var(--aqua);
+    border-radius: 5px;
+    padding: 0.4rem 0.6rem;
+    font-family: var(--sans);
+    font-size: 0.8rem;
+    cursor: pointer;
+    outline: none;
+}
+.theme-switcher select:hover {
+    border-color: var(--magenta);
+}
+.theme-switcher select option {
+    background-color: var(--black);
+    color: var(--white);
 }
 html {
     box-sizing: border-box;
