@@ -325,13 +325,32 @@ article {
     gap: 1rem;
     font-size: 1rem;
 }
-#projects img {
+#projects img,
+#projects .diagram {
     margin: 2rem 0 4rem 0;
     border-left: 1px solid var(--aqua);
     border-top: 1px solid var(--aqua);
     border-radius: 25px;
     padding: 1rem;
 }
+/* Inline SVG diagrams: drawn with theme colours so they follow the theme switcher */
+#projects .diagram {
+    width: 100%;
+    height: auto;
+    font-family: var(--sans);
+}
+.diagram text { text-anchor: middle; fill: var(--white); }
+.diagram .d-step { font-family: var(--mono); font-size: 14px; }
+.diagram .d-title { font-size: 15px; font-weight: bold; fill: var(--aqua); }
+.diagram .d-small { font-size: 12px; }
+.diagram .d-note { font-size: 12px; opacity: 0.75; }
+.diagram .d-out { font-size: 13px; font-weight: bold; }
+.diagram .d-stage { fill: var(--dkblue); stroke: var(--aqua); stroke-width: 1; }
+.diagram .d-box { fill: var(--black); stroke: var(--aqua); stroke-opacity: 0.6; }
+.diagram .d-line { fill: none; stroke: var(--white); stroke-opacity: 0.5; stroke-width: 1.5; }
+.diagram .d-dot { fill: var(--magenta); }
+.diagram .d-flow { fill: none; stroke: var(--magenta); stroke-width: 2.5; }
+.diagram .d-arrowhead { fill: var(--magenta); }
 #about h2 {
     font-size: 2.5rem;
     margin-bottom: calc(2.5rem * 1.5)
@@ -452,7 +471,8 @@ article {
         grid-template-columns: repeat(10, 1fr);
         gap: 1rem;
     }
-    #projects img {
+    #projects img,
+    #projects .diagram {
         grid-column: 1/6;
         grid-row: 1/2;
     }
@@ -467,7 +487,8 @@ article {
          to ul before in the css code, so need to change it again */
         justify-content: flex-end;
     }
-    #projects .reverse img {
+    #projects .reverse img,
+    #projects .reverse .diagram {
         grid-column: 6/11;
         grid-row: 1/2;
     }
@@ -476,6 +497,13 @@ article {
         text-align: left;
         grid-column: 1/7;
         grid-row: 1/2;
+    }
+    /* Diagrams stop short of the text column: the overlap that suits photos would hide content */
+    #projects .diagram {
+        grid-column: 1/5;
+    }
+    #projects .reverse .diagram {
+        grid-column: 7/11;
     }
     #projects .reverse ul {
         justify-content: flex-start;

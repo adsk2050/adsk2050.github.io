@@ -48,7 +48,7 @@
                 <h4>Latest project</h4>
                 <h3>Shrota: AI phone surveys</h3>
                 <div class="black-box">
-                    <p>An AI-powered CATI (computer-assisted telephone interviewing) platform for running phone surveys in India, in Hindi and other Indian languages. Built at <a href="https://getaicati.com" target="_blank">getaicati.com</a>.</p>
+                    <p><a href="https://getaicati.com" target="_blank">Shrota</a> is an AI-powered CATI (computer-assisted telephone interviewing) platform for running phone surveys in India, in Hindi and other Indian languages. See it live at <a href="https://getaicati.com" target="_blank">getaicati.com</a>.</p>
                     <p>Surveys are designed in a web builder and compiled into LangGraph conversation graphs. An AI interviewer then runs them over real phone calls through LiveKit and SIP.</p>
                     <p>Studies dial contact lists in waves, with call records, live monitoring and per-call tracing.</p>
                 </div>
@@ -104,7 +104,57 @@
                     <li>Two-tower Models</li>
                 </ul>
             </div>
-            <img src="./iitg_mechanical_website_screenshot.png" alt="Recommendations project"/>
+            <svg class="diagram" viewBox="0 0 600 330" role="img" aria-labelledby="recs-diagram-title">
+                <title id="recs-diagram-title">Recommendation pipeline: a two-tower model retrieves candidates, a multi-task model re-ranks them, and an epsilon-greedy contextual bandit picks what is shown</title>
+                <defs>
+                    <marker id="recs-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                        <path d="M0,0 L10,5 L0,10 z" class="d-arrowhead"/>
+                    </marker>
+                </defs>
+                <text x="100" y="30" class="d-step">1 &middot; Retrieve</text>
+                <text x="300" y="30" class="d-step">2 &middot; Rank</text>
+                <text x="500" y="30" class="d-step">3 &middot; Explore</text>
+
+                <rect x="15" y="45" width="170" height="230" rx="12" class="d-stage"/>
+                <text x="100" y="75" class="d-title">Two-tower model</text>
+                <rect x="25" y="95" width="70" height="40" rx="6" class="d-box"/>
+                <text x="60" y="120" class="d-small">User tower</text>
+                <rect x="105" y="95" width="70" height="40" rx="6" class="d-box"/>
+                <text x="140" y="120" class="d-small">Item tower</text>
+                <path d="M60,135 L100,178 M140,135 L100,178" class="d-line"/>
+                <circle cx="100" cy="183" r="6" class="d-dot"/>
+                <text x="100" y="210" class="d-small">dot product</text>
+                <text x="100" y="250" class="d-out">top-K candidates</text>
+
+                <rect x="215" y="45" width="170" height="230" rx="12" class="d-stage"/>
+                <text x="300" y="75" class="d-title">Multi-task re-ranker</text>
+                <rect x="235" y="95" width="130" height="36" rx="6" class="d-box"/>
+                <text x="300" y="118" class="d-small">shared layers</text>
+                <path d="M270,131 L262,170 M330,131 L338,170" class="d-line"/>
+                <rect x="228" y="170" width="68" height="32" rx="6" class="d-box"/>
+                <text x="262" y="191" class="d-small">click</text>
+                <rect x="304" y="170" width="68" height="32" rx="6" class="d-box"/>
+                <text x="338" y="191" class="d-small">purchase</text>
+                <text x="300" y="250" class="d-out">ranked list</text>
+
+                <rect x="415" y="45" width="170" height="230" rx="12" class="d-stage"/>
+                <text x="500" y="75" class="d-title">Contextual bandit</text>
+                <text x="500" y="98" class="d-small">&epsilon;-greedy</text>
+                <path d="M500,110 L462,160 M500,110 L538,160" class="d-line"/>
+                <rect x="425" y="160" width="74" height="32" rx="6" class="d-box"/>
+                <text x="462" y="181" class="d-small">exploit</text>
+                <rect x="501" y="160" width="74" height="32" rx="6" class="d-box"/>
+                <text x="538" y="181" class="d-small">explore</text>
+                <text x="462" y="212" class="d-note">1 &minus; &epsilon;</text>
+                <text x="538" y="212" class="d-note">&epsilon;</text>
+                <text x="500" y="250" class="d-out">items shown</text>
+
+                <path d="M187,160 L211,160" class="d-flow" marker-end="url(#recs-arrow)"/>
+                <path d="M387,160 L411,160" class="d-flow" marker-end="url(#recs-arrow)"/>
+                <text x="100" y="305" class="d-note">all items &rarr; hundreds</text>
+                <text x="300" y="305" class="d-note">score each one</text>
+                <text x="500" y="305" class="d-note">try new items too</text>
+            </svg>
         </article>
         <article class="reverse">
             <div class="text">
