@@ -1,0 +1,1756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="An interactive walk through SSE, WebSockets, WebRTC, RTP and SIP: press the buttons and watch what travels on the wire.">
+    <link rel="stylesheet" href="../style.css" type="text/css">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <script src="../theme-switcher.js"></script>
+    <title>Watch the wire: real-time web protocols &middot; Anmol Deep</title>
+<style>
+  /* Simulation tokens, mapped onto the site theme so the theme switcher applies here too */
+  .sim {
+    --bg: var(--black); --surface: var(--dkblue); --ink: var(--white);
+    --muted: color-mix(in srgb, var(--white) 62%, var(--dkblue));
+    --line: color-mix(in srgb, var(--white) 20%, var(--dkblue));
+    --sse: #3CC3AC; --ws: #A98BE6; --rtc: #63A8EA; --rtp: #E57BA8; --sip: #72C27E;
+    --up: #E8A84B; --bad: #F07068; --comment: #6C7896; --ok: #5CC27F;
+    --sans: "IBM Plex Sans", Oxygen, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-family: var(--sans); font-size: 1rem; line-height: 1.5; color: var(--ink);
+  }
+  .tabs { display: flex; flex-wrap: wrap; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .tab { font: 700 1rem var(--sans); color: var(--muted); background: none; border: 0; padding: 10px 18px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+  .tab[aria-selected="true"] { color: var(--ink); }
+  #tab-sse[aria-selected="true"] { border-bottom-color: var(--sse); }
+  #tab-ws[aria-selected="true"] { border-bottom-color: var(--ws); }
+  #tab-rtc[aria-selected="true"] { border-bottom-color: var(--rtc); }
+  #tab-rtp[aria-selected="true"] { border-bottom-color: var(--rtp); }
+  #tab-sip[aria-selected="true"] { border-bottom-color: var(--sip); }
+  .sim button:focus-visible, .sim input:focus-visible { outline: 3px solid var(--up); outline-offset: 2px; }
+
+  .toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+  .speed { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; font-weight: 700; flex-wrap: wrap; }
+  .seg { display: inline-flex; flex-wrap: wrap; border: 2px solid var(--ink); border-radius: 8px; overflow: hidden; }
+  .seg button { font: 700 0.85rem var(--sans); padding: 7px 12px; border: 0; background: var(--surface); color: var(--ink); cursor: pointer; }
+  .seg button + button { border-left: 2px solid var(--ink); }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+  .seg button:disabled { opacity: 0.4; cursor: not-allowed; }
+  #rtc-nat { display: flex; flex-direction: column; width: 100%; }
+  #rtc-nat button { text-align: left; }
+  #rtc-nat button + button { border-left: 0; border-top: 2px solid var(--ink); }
+
+  .panel[hidden] { display: none; }
+  #panel-sse { --accent: var(--sse); }
+  #panel-ws { --accent: var(--ws); }
+  #panel-rtc { --accent: var(--rtc); }
+  #panel-rtp { --accent: var(--rtp); }
+  #panel-sip { --accent: var(--sip); }
+
+  .narration { margin: 14px 0 18px; padding: 12px 16px; border-left: 5px solid var(--accent); background: var(--surface); border-radius: 0 10px 10px 0; min-height: 3.2em; max-width: 82ch; }
+
+  /* ---------- Ladder diagram ---------- */
+  .ladder { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 10px 6px; }
+  .lhead { display: grid; grid-template-columns: repeat(var(--n), 1fr); border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+  .lcol { text-align: center; padding: 0 4px; }
+  .lcol h3 { margin: 0; font-size: 0.92rem; line-height: 1.2; }
+  .lst { display: block; font-size: 0.78rem; color: var(--muted); min-height: 1.3em; }
+  .lbody { max-height: 430px; overflow-y: auto; }
+  .ltrack { position: relative; min-height: 190px; padding: 6px 0 10px; }
+  .lifeline { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--line); }
+  .lempty { position: relative; z-index: 1; display: table; margin: 70px auto; padding: 4px 10px; background: var(--surface); color: var(--muted); font-size: 0.9rem; text-align: center; }
+  .lrow { display: block; position: relative; width: 100%; height: 44px; margin: 0; padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; font: inherit; text-align: left; }
+  .lrow:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+  .lrow.sel { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+  .arrow { position: absolute; top: 27px; height: 0; border-top: 2px solid var(--c); }
+  .ahead { position: absolute; top: 22px; width: 0; height: 0; border-top: 6px solid transparent; border-bottom: 6px solid transparent; }
+  .ahead.r { border-left: 10px solid var(--c); }
+  .ahead.l { border-right: 10px solid var(--c); }
+  .alabel { position: absolute; top: 3px; transform: translateX(-50%); z-index: 2; white-space: nowrap; font-size: 0.74rem; font-weight: 700; color: var(--c); background: var(--surface); padding: 1px 6px; border-radius: 4px; }
+  .ldot { position: absolute; top: 23px; width: 11px; height: 11px; border-radius: 50%; background: var(--c); transform: translateX(-50%); z-index: 3; }
+  .via { position: absolute; top: 22px; width: 12px; height: 12px; border: 2px solid var(--c); background: var(--surface); border-radius: 2px; transform: translateX(-50%) rotate(45deg); z-index: 2; }
+  .failx { position: absolute; top: 15px; transform: translateX(-50%); color: var(--bad); font-weight: 700; font-size: 1.1rem; z-index: 3; }
+  .k-req { --c: var(--accent); }
+  .k-resp { --c: var(--accent); }
+  .k-resp .arrow, .k-err .arrow, .k-fail .arrow { border-top-style: dashed; }
+  .k-err, .k-fail { --c: var(--bad); }
+  .k-stun { --c: var(--muted); }
+  .k-dtls { --c: var(--ink); }
+  .k-data, .k-media { --c: var(--up); }
+  .lrow.stream { height: 56px; }
+  .band { position: absolute; top: 27px; height: 8px; background: color-mix(in srgb, var(--c) 30%, transparent); border-radius: 4px; }
+  .sdot { position: absolute; width: 9px; height: 9px; border-radius: 50%; background: var(--c); transform: translateX(-50%); z-index: 3; }
+  .sdot.f { top: 22px; }
+  .sdot.b { top: 32px; background: var(--accent); }
+  .lrow.stream.stopped .band { background: none; border-top: 2px dashed var(--line); height: 0; top: 31px; }
+  .lrow.stream.stopped .alabel { color: var(--muted); }
+  .lnote { position: relative; height: 32px; display: flex; align-items: center; justify-content: center; }
+  .lnote span { position: relative; z-index: 1; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 2px 12px; font-size: 0.78rem; color: var(--muted); }
+
+  /* ---------- Horizontal stage (RTP) ---------- */
+  .stage { display: grid; grid-template-columns: minmax(96px, 160px) 1fr minmax(96px, 160px); align-items: stretch; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+  .node { border: 2px solid var(--ink); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 5px; font-size: 0.82rem; position: relative; z-index: 2; background: var(--surface); }
+  .node h3 { margin: 0; font-size: 1rem; }
+  .node .k { color: var(--muted); display: block; font-size: 0.74rem; }
+  .node .v { font-family: var(--mono); font-size: 0.78rem; word-break: break-word; }
+  .node.flash { animation: flash 0.5s; }
+  @keyframes flash { 40% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 35%, transparent); } }
+  .lanes { display: flex; flex-direction: column; justify-content: center; padding: 0 2px; min-width: 0; }
+  .lane { position: relative; height: 110px; }
+  .pipe { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); height: 34px; border: 2px dashed var(--line); border-left: 0; border-right: 0; display: flex; align-items: center; justify-content: center; transition: all 0.35s; }
+  .pipe-label { font-size: 0.74rem; color: var(--muted); text-align: center; padding: 0 6px; line-height: 1.2; background: var(--surface); }
+  .lane.open .pipe { border-style: solid; border-width: 3px 0; border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  .lane.open .pipe-label { background: transparent; color: var(--ink); }
+  .pkt { position: absolute; left: 0; z-index: 3; white-space: nowrap; font: 600 0.72rem/1 var(--mono); padding: 6px 8px; border-radius: 6px; color: #fff; pointer-events: none; }
+  .pkt.top { top: 4px; }
+  .pkt.bot { bottom: 4px; }
+  .pkt.down { background: var(--accent); }
+  .pkt.upk { background: var(--up); }
+  .pkt.lost { background: var(--bad) !important; color: #fff; border-color: var(--bad); transition: opacity 0.6s; }
+  .pkt.gone { opacity: 0; transition: opacity 0.4s; }
+
+  .jb { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin-bottom: 20px; }
+  .jb h4 { margin: 0 0 2px; font-size: 1rem; }
+  .jb .sub { margin: 0 0 10px; font-size: 0.85rem; color: var(--muted); }
+  .slots { display: flex; flex-wrap: wrap; gap: 6px; min-height: 34px; align-items: center; }
+  .slot { font: 600 0.76rem var(--mono); padding: 5px 9px; border-radius: 6px; border: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--ink); cursor: pointer; }
+  .slot.next { background: var(--accent); color: #fff; }
+  .slots .none { color: var(--muted); font-size: 0.85rem; }
+  .jbinfo { font-size: 0.85rem; margin: 8px 0 14px; }
+  .timeline { display: flex; flex-wrap: wrap; gap: 3px; min-height: 16px; }
+  .sq { width: 14px; height: 14px; border-radius: 3px; }
+  .sq.play { background: var(--ok); }
+  .sq.lost { background: var(--bad); }
+  .sq.quiet { background: var(--line); }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 8px; font-size: 0.8rem; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+
+  /* ---------- SSE / WebSocket stage extras ---------- */
+  .lane { height: 92px; }
+  #rtp-lane { height: 110px; }
+  .lanes { gap: 14px; }
+  .lane.side { height: 70px; opacity: 0.25; transition: opacity 0.3s; }
+  .lane.side.active { opacity: 1; }
+  .lane.http .pipe { border-style: solid; border-color: var(--up); background: color-mix(in srgb, var(--up) 10%, transparent); }
+  .lane.http .pipe-label { background: transparent; color: var(--ink); }
+  .lane.broken .pipe { border-style: dashed; border-color: var(--bad); background: color-mix(in srgb, var(--bad) 8%, transparent); }
+  .lane.broken .pipe-label { color: var(--bad); background: transparent; font-weight: 700; }
+  .pkt.http-down { background: var(--ink); color: var(--surface); }
+  .pkt.comment { background: var(--comment); }
+  .pkt.ctrl { background: transparent; color: var(--ink); border: 2px solid var(--accent); }
+  .pkt.arrive { opacity: 0; transition: opacity 0.25s; }
+  .stats { display: flex; flex-wrap: wrap; gap: 6px 20px; font-size: 0.85rem; color: var(--muted); margin: 10px 4px 0; }
+  .stats b { color: var(--ink); font-family: var(--mono); font-weight: 600; }
+
+  /* ---------- Controls ---------- */
+  .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; margin-bottom: 20px; }
+  .group { border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: var(--surface); }
+  .group h4 { margin: 0 0 8px; font-size: 0.9rem; }
+  .group .btns { display: flex; flex-wrap: wrap; gap: 8px; }
+  .group .hint { font-size: 0.8rem; color: var(--muted); margin: 8px 0 0; }
+  button.b { font: 700 0.85rem var(--sans); padding: 8px 12px; border-radius: 8px; cursor: pointer; border: 2px solid var(--ink); background: var(--surface); color: var(--ink); }
+  button.b.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.b.up { border-color: var(--up); color: var(--up); }
+  button.b.bad { border-color: var(--bad); color: var(--bad); }
+  button.b:disabled { opacity: 0.35; cursor: not-allowed; }
+  button.b:not(:disabled):active { transform: translateY(1px); }
+  .toggle { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; margin-top: 10px; cursor: pointer; }
+  .toggle input { width: 18px; height: 18px; accent-color: var(--accent); }
+
+  /* ---------- Logs / inspector ---------- */
+  .logs { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .logbox { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; display: flex; flex-direction: column; min-width: 0; }
+  .logbox header { padding: 10px 12px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .logbox h4 { margin: 0; font-size: 0.95rem; }
+  .logbox header p { margin: 2px 0 0; font-size: 0.8rem; color: var(--muted); }
+  .linkbtn { font: 700 0.78rem var(--sans); background: none; border: 0; color: var(--accent); cursor: pointer; padding: 2px 0; text-decoration: underline; white-space: nowrap; }
+  .insp { margin: 0; padding: 10px 12px; height: 320px; overflow: auto; font: 0.76rem/1.5 var(--mono); white-space: pre-wrap; word-break: break-word; }
+  .log { height: 320px; overflow-y: auto; padding: 8px 12px; font-family: var(--mono); font-size: 0.76rem; }
+  .entry { padding: 6px 0 6px 10px; border-left: 3px solid var(--line); margin-bottom: 6px; }
+  .entry .tag { display: block; font-family: var(--sans); font-size: 0.72rem; color: var(--muted); font-weight: 700; }
+  .entry pre { margin: 2px 0 0; white-space: pre-wrap; word-break: break-word; font: inherit; }
+  .entry.down { border-left-color: var(--accent); }
+  .entry.up { border-left-color: var(--up); }
+  .entry.bad { border-left-color: var(--bad); }
+  .entry.bad pre { color: var(--bad); }
+  .entry.muted { border-left-color: var(--comment); color: var(--muted); }
+  .log .empty { color: var(--muted); font-family: var(--sans); font-size: 0.85rem; }
+  .footnote { margin-top: 28px; color: var(--muted); font-size: 0.85rem; max-width: 72ch; }
+
+  @media (max-width: 760px) {
+    .logs { grid-template-columns: 1fr; }
+    .log, .insp { height: 240px; }
+    .stage { padding: 10px; grid-template-columns: 86px 1fr 86px; }
+    .node { padding: 7px; font-size: 0.75rem; }
+    .pipe-label { font-size: 0.66rem; }
+    .pkt { font-size: 0.64rem; padding: 5px 6px; }
+    .lcol h3 { font-size: 0.76rem; }
+    .lst { font-size: 0.68rem; }
+    .alabel { font-size: 0.64rem; padding: 1px 3px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .node.flash { animation: none; } }
+</style>
+</head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZJ7X6BCWP4"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-ZJ7X6BCWP4');
+</script>
+<body>
+    <nav>
+        <ul>
+            <li><h1><a href="../index.html"><span class="name-icon fas fa-chart-line"></span> Anmol</a></h1></li>
+            <li><a href="../projects.html">Projects</a></li>
+            <li><a href="../about.html">About</a></li>
+            <li><a href="./index.html">Blog</a></li>
+            <li><a href="../index.html#contact">Contact</a></li>
+            <li>
+                <a href="https://linkedin.com/in/anmoldeep1" target="_blank">
+                    <span class="fab fa-linkedin" aria-hidden="true"></span>
+                    <span class="sr-only">LinkedIn</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://github.com/adsk2050" target="_blank">
+                    <span class="fab fa-github" aria-hidden="true"></span>
+                    <span class="sr-only">GitHub</span>
+                </a>
+            </li>
+            <li><a href="../resume.html" class="resume-button">Resume</a></li>
+        </ul>
+    </nav>
+
+    <main class="post">
+        <header class="post-header">
+            <p class="post-meta"><a href="./index.html">&larr; All posts</a> &middot; <time datetime="2026-10-05">5 October 2026</time> &middot; Interactive</p>
+            <h1>Watch the wire: real-time web protocols</h1>
+            <p>Five ways to move data in real time. SSE and WebSockets keep a connection open between a browser and a server. SIP and WebRTC set up calls, and RTP carries the audio and video once a call is up. Press the buttons, watch what travels, and click messages to read them in full.</p>
+        </header>
+        <div class="sim">
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-sse" aria-selected="true" aria-controls="panel-sse">Server-Sent Events</button>
+    <button class="tab" role="tab" id="tab-ws" aria-selected="false" aria-controls="panel-ws">WebSockets</button>
+    <button class="tab" role="tab" id="tab-rtc" aria-selected="false" aria-controls="panel-rtc">WebRTC</button>
+    <button class="tab" role="tab" id="tab-rtp" aria-selected="false" aria-controls="panel-rtp">RTP</button>
+    <button class="tab" role="tab" id="tab-sip" aria-selected="false" aria-controls="panel-sip">SIP</button>
+  </div>
+
+  <div class="toolbar">
+    <div class="speed">
+      <span id="speed-label">Speed</span>
+      <div class="seg" role="group" aria-labelledby="speed-label">
+        <button data-speed="4" aria-pressed="false">Very slow</button>
+        <button data-speed="2.5" aria-pressed="true">Slow</button>
+        <button data-speed="1.5" aria-pressed="false">Normal</button>
+        <button data-speed="0.8" aria-pressed="false">Fast</button>
+      </div>
+    </div>
+    <button class="b bad" id="reset-btn">Reset this simulation</button>
+  </div>
+
+  <section class="panel" id="panel-sse" role="tabpanel" aria-labelledby="tab-sse">
+    <div class="stage">
+      <div class="node" id="sse-client">
+        <h3>Browser</h3>
+        <div><span class="k">readyState</span><span class="v" id="sse-rs">no EventSource</span></div>
+        <div><span class="k">Last-Event-ID</span><span class="v" id="sse-lid">none</span></div>
+      </div>
+      <div class="lanes">
+        <div class="lane" id="sse-lane"><div class="pipe"><span class="pipe-label" id="sse-pipe-label">No connection</span></div></div>
+        <div class="lane side" id="sse-side"><div class="pipe"><span class="pipe-label">Separate HTTP request (only when the client sends data)</span></div></div>
+      </div>
+      <div class="node" id="sse-server">
+        <h3>Server</h3>
+        <div><span class="k">Last event id</span><span class="v" id="sse-sid">0</span></div>
+        <div><span class="k">Event history</span><span class="v" id="sse-hist">empty</span></div>
+      </div>
+    </div>
+    <div class="stats">
+      <span>HTTP requests made: <b id="sse-req">0</b></span>
+      <span>Long-lived connections open: <b id="sse-conn">0</b></span>
+    </div>
+
+    <p class="narration" id="sse-say" aria-live="polite">Nothing is connected yet. Press Connect to create an EventSource and open the stream.</p>
+
+    <div class="controls">
+      <div class="group">
+        <h4>Browser</h4>
+        <div class="btns">
+          <button class="b primary" id="sse-connect">Connect</button>
+          <button class="b up" id="sse-post">Send data to server</button>
+          <button class="b" id="sse-close">Close</button>
+        </div>
+      </div>
+      <div class="group">
+        <h4>Server</h4>
+        <div class="btns">
+          <button class="b primary" id="sse-publish">Publish an event</button>
+        </div>
+        <label class="toggle"><input type="checkbox" id="sse-auto"><span>Publish automatically</span></label>
+      </div>
+      <div class="group">
+        <h4>Network</h4>
+        <div class="btns">
+          <button class="b bad" id="sse-drop">Drop the connection</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="logs">
+      <div class="logbox">
+        <header><div><h4>On the wire</h4><p>Raw HTTP and event-stream text</p></div></header>
+        <div class="log" id="sse-wire"><div class="empty">Traffic will appear here.</div></div>
+      </div>
+      <div class="logbox">
+        <header><div><h4>What your JavaScript sees</h4><p>EventSource events and handlers</p></div></header>
+        <div class="log" id="sse-js"><div class="empty">Events will appear here.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-ws" role="tabpanel" aria-labelledby="tab-ws" hidden>
+    <div class="stage">
+      <div class="node" id="ws-client">
+        <h3>Browser</h3>
+        <div><span class="k">readyState</span><span class="v" id="ws-rs">no WebSocket</span></div>
+        <div><span class="k">Last received</span><span class="v" id="ws-crecv">nothing</span></div>
+      </div>
+      <div class="lanes">
+        <div class="lane" id="ws-lane"><div class="pipe"><span class="pipe-label" id="ws-pipe-label">No connection</span></div></div>
+      </div>
+      <div class="node" id="ws-server">
+        <h3>Server</h3>
+        <div><span class="k">Last received</span><span class="v" id="ws-srecv">nothing</span></div>
+        <div><span class="k">Undelivered</span><span class="v" id="ws-lost">0 messages</span></div>
+      </div>
+    </div>
+    <div class="stats">
+      <span>HTTP requests made: <b id="ws-req">0</b></span>
+      <span>Frames sent by browser: <b id="ws-up">0</b></span>
+      <span>Frames sent by server: <b id="ws-down">0</b></span>
+    </div>
+
+    <p class="narration" id="ws-say" aria-live="polite">Nothing is connected yet. Press Connect to start the WebSocket handshake.</p>
+
+    <div class="controls">
+      <div class="group">
+        <h4>Browser</h4>
+        <div class="btns">
+          <button class="b primary" id="ws-connect">Connect</button>
+          <button class="b up" id="ws-send">Send text</button>
+          <button class="b up" id="ws-bin">Send binary</button>
+          <button class="b" id="ws-close">Close</button>
+        </div>
+      </div>
+      <div class="group">
+        <h4>Server</h4>
+        <div class="btns">
+          <button class="b primary" id="ws-push">Send a message</button>
+          <button class="b" id="ws-ping">Ping</button>
+        </div>
+        <label class="toggle"><input type="checkbox" id="ws-auto"><span>Send automatically</span></label>
+      </div>
+      <div class="group">
+        <h4>Network</h4>
+        <div class="btns">
+          <button class="b bad" id="ws-drop">Drop the connection</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="logs">
+      <div class="logbox">
+        <header><div><h4>On the wire</h4><p>HTTP handshake, then WebSocket frames</p></div></header>
+        <div class="log" id="ws-wire"><div class="empty">Traffic will appear here.</div></div>
+      </div>
+      <div class="logbox">
+        <header><div><h4>What your JavaScript sees</h4><p>WebSocket events and handlers</p></div></header>
+        <div class="log" id="ws-js"><div class="empty">Events will appear here.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-rtc" role="tabpanel" aria-labelledby="tab-rtc" hidden>
+    <div class="ladder" id="rtc-ladder"></div>
+    <p class="narration" id="rtc-say" aria-live="polite">Two browsers want a video call. Step through how they find each other, agree on media, get through their home routers, and start sending encrypted audio and video directly to each other.</p>
+    <div class="controls">
+      <div class="group">
+        <h4>Steps</h4>
+        <div class="btns">
+          <button class="b primary" id="rtc-next">Next step</button>
+          <button class="b" id="rtc-all">Run remaining steps</button>
+        </div>
+      </div>
+      <div class="group">
+        <h4>Network</h4>
+        <div class="seg" role="group" aria-label="Network conditions" id="rtc-nat">
+          <button data-nat="easy" aria-pressed="true">Regular home routers</button>
+          <button data-nat="strict" aria-pressed="false">Peer B behind strict NAT</button>
+        </div>
+        <p class="hint">Pick this before the ICE step. The strict option forces the TURN relay fallback.</p>
+      </div>
+      <div class="group">
+        <h4>During the call</h4>
+        <div class="btns">
+          <button class="b up" id="rtc-dc">Send chat message</button>
+          <button class="b" id="rtc-hang">Hang up</button>
+        </div>
+      </div>
+    </div>
+    <div class="logs">
+      <div class="logbox">
+        <header><div><h4>Message inspector</h4><p id="rtc-insp-title">No message selected</p></div></header>
+        <pre class="insp" id="rtc-insp"></pre>
+      </div>
+      <div class="logbox">
+        <header><div><h4>What the app code does</h4><p>JavaScript running in each browser</p></div></header>
+        <div class="log" id="rtc-log"><div class="empty">Code will appear here.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-rtp" role="tabpanel" aria-labelledby="tab-rtp" hidden>
+    <div class="stage">
+      <div class="node" id="rtp-sender">
+        <h3>Sender</h3>
+        <div><span class="k">State</span><span class="v" id="rtp-sstate">idle</span></div>
+        <div><span class="k">Next sequence no.</span><span class="v" id="rtp-sseq">23110</span></div>
+        <div><span class="k">Timestamp</span><span class="v" id="rtp-sts">1930472</span></div>
+        <div><span class="k">Last feedback</span><span class="v" id="rtp-sfb">none yet</span></div>
+      </div>
+      <div class="lanes">
+        <div class="lane" id="rtp-lane"><div class="pipe"><span class="pipe-label" id="rtp-pipe-label">Not streaming</span></div></div>
+      </div>
+      <div class="node" id="rtp-receiver">
+        <h3>Receiver</h3>
+        <div><span class="k">Received</span><span class="v" id="rtp-recv">0</span></div>
+        <div><span class="k">Lost in network</span><span class="v" id="rtp-lost">0</span></div>
+        <div><span class="k">Arrived too late</span><span class="v" id="rtp-late">0</span></div>
+        <div><span class="k">Jitter</span><span class="v" id="rtp-jit">0.0 ms</span></div>
+      </div>
+    </div>
+    <p class="narration" id="rtp-say" aria-live="polite">Press Start to send audio as a stream of RTP packets. Then turn on packet loss and jitter, and watch how the receiver copes.</p>
+    <div class="jb">
+      <h4>Receiver's jitter buffer</h4>
+      <p class="sub">Packets wait here, sorted by sequence number, until it's their turn to play.</p>
+      <div class="slots" id="rtp-slots"><span class="none">Empty</span></div>
+      <div class="jbinfo" id="rtp-jbinfo">Waiting for packets.</div>
+      <h4>What the listener hears</h4>
+      <p class="sub">One square per 20 ms of audio, oldest first.</p>
+      <div class="timeline" id="rtp-timeline"></div>
+      <div class="legend">
+        <span><i class="sq play"></i>Played</span>
+        <span><i class="sq lost"></i>Missing, concealed by guessing</span>
+        <span><i class="sq quiet"></i>Nothing to play</span>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="group">
+        <h4>Sender</h4>
+        <div class="btns">
+          <button class="b primary" id="rtp-start">Start stream</button>
+          <button class="b" id="rtp-stop">Stop stream</button>
+        </div>
+        <label class="toggle"><input type="checkbox" id="rtp-talk" checked><span>Speaking (uncheck for silence)</span></label>
+      </div>
+      <div class="group">
+        <h4>Network</h4>
+        <label class="toggle"><input type="checkbox" id="rtp-loss"><span>Lose some packets</span></label>
+        <label class="toggle"><input type="checkbox" id="rtp-jitter"><span>Add jitter (uneven delays, reordering)</span></label>
+      </div>
+      <div class="group">
+        <h4>Receiver</h4>
+        <div class="seg" role="group" aria-label="Jitter buffer size" id="rtp-depth">
+          <button data-depth="1" aria-pressed="true">Small buffer</button>
+          <button data-depth="4" aria-pressed="false">Large buffer</button>
+        </div>
+        <div class="btns" style="margin-top:10px">
+          <button class="b up" id="rtp-rr">Send RTCP report now</button>
+        </div>
+      </div>
+    </div>
+    <div class="logs">
+      <div class="logbox">
+        <header><div><h4>Packet inspector</h4><p id="rtp-insp-title">Shows the latest packet. Click a packet in the jitter buffer to inspect it.</p></div><button class="linkbtn" id="rtp-follow" hidden>Show latest</button></header>
+        <pre class="insp" id="rtp-insp">No packets yet.</pre>
+      </div>
+      <div class="logbox">
+        <header><div><h4>Events</h4><p>Loss, reordering, concealment and feedback</p></div></header>
+        <div class="log" id="rtp-log"><div class="empty">Events will appear here.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-sip" role="tabpanel" aria-labelledby="tab-sip" hidden>
+    <div class="ladder" id="sip-ladder"></div>
+    <p class="narration" id="sip-say" aria-live="polite">Alice wants to call Bob. Both phones use the same SIP proxy at example.com. Start by registering Bob's phone, or try calling first to see what happens when the proxy doesn't know where Bob is.</p>
+    <div class="controls">
+      <div class="group">
+        <h4>Alice's phone</h4>
+        <div class="btns">
+          <button class="b primary" id="sip-call">Call Bob</button>
+          <button class="b" id="sip-cancel">Cancel while ringing</button>
+          <button class="b" id="sip-hangA">Hang up</button>
+        </div>
+      </div>
+      <div class="group">
+        <h4>Bob's phone</h4>
+        <div class="btns">
+          <button class="b primary" id="sip-reg">Register with proxy</button>
+          <button class="b primary" id="sip-answer">Answer</button>
+          <button class="b bad" id="sip-decline">Decline</button>
+          <button class="b" id="sip-hangB">Hang up</button>
+        </div>
+      </div>
+    </div>
+    <div class="logs">
+      <div class="logbox">
+        <header><div><h4>Message inspector</h4><p id="sip-insp-title">No message selected</p></div></header>
+        <pre class="insp" id="sip-insp"></pre>
+      </div>
+      <div class="logbox">
+        <header><div><h4>What each side does</h4><p>Phones and proxy, behind the scenes</p></div></header>
+        <div class="log" id="sip-log"><div class="empty">Activity will appear here.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <p class="footnote">This is a simulation for learning. Timings are slowed down a lot (real audio sends 50 RTP packets per second), frame and message details are simplified, and real WebSocket frames are binary but are shown here as readable descriptions. Addresses are from the ranges reserved for documentation.</p>
+        </div>
+    </main>
+
+    <div class="gradient-line"></div>
+    <footer>
+        <h2>Anmol Deep &middot; AI/ML Engineer</h2>
+        <ul>
+            <li><a href="https://stackoverflow.com/users/7418045/anmol-deep">Stack overflow</a></li>
+        </ul>
+        <p><small>&copy; 2026 Anmol Deep. All rights reserved.</small></p>
+    </footer>
+
+<script>window.SIM = { speed: 2.5 };</script>
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const T = (ms) => ms * window.SIM.speed;
+
+  /* ---------- Tabs ---------- */
+  // tabs are handled by the second script
+
+  /* ---------- Shared helpers ---------- */
+  function fly(lane, dir, label, kind, dur) {
+    return new Promise((resolve) => {
+      const p = document.createElement('div');
+      p.className = 'pkt ' + kind + ' ' + (dir === 's2c' ? 'top' : 'bot');
+      p.textContent = label;
+      lane.appendChild(p);
+      const w = Math.max(0, lane.clientWidth - p.offsetWidth);
+      const from = dir === 'c2s' ? 0 : w;
+      const to = dir === 'c2s' ? w : 0;
+      p.style.transform = 'translateX(' + from + 'px)';
+      const d = T(dur || 1400);
+      let done = false;
+      const anim = p.animate(
+        [{ transform: 'translateX(' + from + 'px)' }, { transform: 'translateX(' + to + 'px)' }],
+        { duration: d, easing: 'cubic-bezier(.45,.05,.3,1)', fill: 'forwards' }
+      );
+      anim.onfinish = () => {
+        if (done) return; done = true;
+        p.classList.add('arrive');
+        setTimeout(() => p.remove(), 260);
+        resolve(true);
+      };
+      p._kill = () => {
+        if (done) return; done = true;
+        anim.pause();
+        p.classList.add('lost');
+        requestAnimationFrame(() => { p.style.opacity = '0'; });
+        setTimeout(() => p.remove(), 700);
+        resolve(false);
+      };
+    });
+  }
+  function killPackets(lane) { lane.querySelectorAll('.pkt').forEach((p) => p._kill && p._kill()); }
+  function clearPackets(lane) { lane.querySelectorAll('.pkt').forEach((p) => p.remove()); }
+
+  function log(el, tag, body, kind) {
+    const empty = el.querySelector('.empty');
+    if (empty) empty.remove();
+    const e = document.createElement('div');
+    e.className = 'entry ' + (kind || '');
+    const t = document.createElement('span'); t.className = 'tag'; t.textContent = tag;
+    const pre = document.createElement('pre'); pre.textContent = body;
+    e.appendChild(t); e.appendChild(pre);
+    el.appendChild(e);
+    while (el.children.length > 80) el.removeChild(el.firstChild);
+    el.scrollTop = el.scrollHeight;
+  }
+  function resetLog(el, text) { el.innerHTML = ''; const d = document.createElement('div'); d.className = 'empty'; d.textContent = text; el.appendChild(d); }
+  function flash(el) { el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
+  function setLane(lane, cls, label, labelEl) {
+    lane.classList.remove('http', 'open', 'broken');
+    if (cls) lane.classList.add(cls);
+    labelEl.textContent = label;
+  }
+
+  /* =====================================================
+     SSE
+     ===================================================== */
+  const S = {
+    lane: $('sse-lane'), side: $('sse-side'), label: $('sse-pipe-label'),
+    wire: $('sse-wire'), js: $('sse-js'), say: (t) => { $('sse-say').textContent = t; },
+    state: 'none', gen: 0, serverId: 0, clientId: 0, history: [], requests: 0,
+    pingTimer: null, retryTimer: null, autoTimer: null, sample: 0, postBusy: false,
+  };
+  const SSE_SAMPLES = [
+    { event: 'order', data: '{"item":"coffee","qty":2}' },
+    { event: null, data: 'Kitchen is open' },
+    { event: 'price', data: '{"symbol":"AAPL","price":231.5}' },
+    { event: 'order', data: '{"item":"bagel","qty":1}' },
+    { event: null, data: 'New review posted' },
+    { event: 'price', data: '{"symbol":"AAPL","price":231.9}' },
+  ];
+  const RS = { none: 'no EventSource', connecting: '0 (CONNECTING)', reconnecting: '0 (CONNECTING)', open: '1 (OPEN)', closed: '2 (CLOSED)' };
+
+  function sseUI() {
+    $('sse-rs').textContent = RS[S.state];
+    $('sse-lid').textContent = S.clientId ? String(S.clientId) : 'none';
+    $('sse-sid').textContent = String(S.serverId);
+    $('sse-hist').textContent = S.history.length ? S.history.length + ' (ids 1 to ' + S.serverId + ')' : 'empty';
+    $('sse-req').textContent = String(S.requests);
+    $('sse-conn').textContent = (S.state === 'open' || S.state === 'connecting') ? '1' : '0';
+    $('sse-connect').disabled = !(S.state === 'none' || S.state === 'closed');
+    $('sse-close').disabled = !(S.state === 'open' || S.state === 'connecting' || S.state === 'reconnecting');
+    $('sse-drop').disabled = S.state !== 'open';
+    $('sse-post').disabled = S.postBusy;
+  }
+
+  function eventText(ev) {
+    let t = 'id: ' + ev.id + '\n';
+    if (ev.event) t += 'event: ' + ev.event + '\n';
+    t += 'data: ' + ev.data + '\n';
+    return t + '(blank line ends the event)';
+  }
+
+  async function sseConnect(isReconnect) {
+    const g = ++S.gen;
+    S.state = 'connecting';
+    S.requests++;
+    if (!isReconnect) S.clientId = 0;
+    const lastId = isReconnect && S.clientId ? S.clientId : null;
+    setLane(S.lane, 'http', isReconnect ? 'Reconnecting: new GET request' : 'Sending GET request', S.label);
+    sseUI();
+
+    if (!isReconnect) {
+      log(S.js, 'Your code', 'const source = new EventSource("/events");', 'muted');
+      S.say('The browser opens a completely normal HTTP GET request. The Accept header says it wants an event stream.');
+    } else {
+      S.say(lastId
+        ? 'The browser reconnects on its own and sends Last-Event-ID: ' + lastId + ', so the server knows where this client left off.'
+        : 'The browser reconnects on its own. It never received an event, so there is no Last-Event-ID to send.');
+    }
+    let req = 'GET /events HTTP/1.1\nHost: shop.example\nAccept: text/event-stream\nCache-Control: no-cache';
+    if (lastId) req += '\nLast-Event-ID: ' + lastId;
+    log(S.wire, 'Browser to server', req, 'up');
+
+    const ok1 = await fly(S.lane, 'c2s', lastId ? 'GET /events (Last-Event-ID: ' + lastId + ')' : 'GET /events', 'upk');
+    if (!ok1 || g !== S.gen) return;
+    flash($('sse-server'));
+    log(S.wire, 'Server to browser', 'HTTP/1.1 200 OK\nContent-Type: text/event-stream\nCache-Control: no-cache\nConnection: keep-alive\n\n(headers sent, but the response body stays open)', 'down');
+    const ok2 = await fly(S.lane, 's2c', '200 OK  text/event-stream', 'http-down');
+    if (!ok2 || g !== S.gen) return;
+
+    S.state = 'open';
+    setLane(S.lane, 'open', 'One HTTP response, held open. Events stream through it.', S.label);
+    flash($('sse-client'));
+    log(S.js, 'open event', 'source.readyState === 1 (OPEN)', 'down');
+    sseUI();
+
+    const missed = S.history.filter((e) => lastId !== null && e.id > lastId);
+    if (missed.length) {
+      S.say('The server replays ' + missed.length + ' missed event' + (missed.length > 1 ? 's' : '') + ' (ids ' + missed[0].id + ' to ' + missed[missed.length - 1].id + ') from its history, then carries on with live events. Nothing was lost.');
+      missed.forEach((ev, i) => setTimeout(() => { if (g === S.gen) sseDeliver(ev, true); }, T(i * 350)));
+    } else if (!isReconnect) {
+      S.say('The stream is open. The server answered with headers but never finished the response, so it can keep writing events into it. Try publishing an event.');
+    } else {
+      S.say('Reconnected. There was nothing to replay, so the stream just continues.');
+    }
+
+    clearInterval(S.pingTimer);
+    S.pingTimer = setInterval(() => ssePing(g), T(9000));
+  }
+
+  async function sseDeliver(ev, replay) {
+    const g = S.gen;
+    log(S.wire, replay ? 'Server to browser (replayed)' : 'Server to browser', eventText(ev), 'down');
+    const ok = await fly(S.lane, 's2c', 'id ' + ev.id + ': ' + (ev.event || 'message'), 'down', replay ? 800 : 1400);
+    if (g !== S.gen || S.state !== 'open') return;
+    if (!ok) return;
+    S.clientId = Math.max(S.clientId, ev.id);
+    flash($('sse-client'));
+    if (ev.event) {
+      log(S.js, '"' + ev.event + '" listener fired', 'source.addEventListener("' + ev.event + '", e => ...)\ne.data        = ' + ev.data + '\ne.lastEventId = "' + ev.id + '"', 'down');
+    } else {
+      log(S.js, 'onmessage fired (no event name)', 'source.onmessage = e => ...\ne.data        = "' + ev.data + '"\ne.lastEventId = "' + ev.id + '"', 'down');
+    }
+    sseUI();
+  }
+
+  function ssePublish() {
+    const s = SSE_SAMPLES[S.sample++ % SSE_SAMPLES.length];
+    const ev = { id: ++S.serverId, event: s.event, data: s.data };
+    S.history.push(ev);
+    flash($('sse-server'));
+    if (S.state === 'open') {
+      sseDeliver(ev, false);
+      if (!$('sse-auto').checked) S.say('The server writes a few lines of plain text into the open response. Each event has an id, an optional event name, and data. A blank line marks the end of the event.');
+    } else if (S.state === 'reconnecting') {
+      S.say('Event ' + ev.id + ' is published while the client is disconnected. The server keeps it in its history so it can replay it after the reconnect.');
+    } else {
+      S.say('Event ' + ev.id + ' is published, but no client is subscribed. It is stored in history. A fresh connection will not receive it, because it has no Last-Event-ID.');
+    }
+    sseUI();
+  }
+
+  async function ssePing(g) {
+    if (g !== S.gen || S.state !== 'open') return;
+    log(S.wire, 'Server to browser', ': keep-alive\n(a comment line, which starts with a colon)', 'muted');
+    const ok = await fly(S.lane, 's2c', ': keep-alive', 'comment', 1100);
+    if (!ok || g !== S.gen) return;
+    log(S.js, 'Nothing fired', 'Comment lines are ignored by EventSource. They only keep proxies and load balancers from closing an idle connection.', 'muted');
+  }
+
+  function sseDrop() {
+    if (S.state !== 'open') return;
+    S.gen++;
+    killPackets(S.lane);
+    clearInterval(S.pingTimer);
+    S.state = 'reconnecting';
+    log(S.wire, 'Network', 'TCP connection lost (wifi dropped, proxy timeout, server restart...)', 'bad');
+    log(S.js, 'error event', 'source.readyState === 0 (CONNECTING)\nThe browser will retry by itself. Your code does nothing.', 'bad');
+    let n = 3;
+    setLane(S.lane, 'broken', 'Connection lost. Browser retries in ' + n + 's', S.label);
+    S.say('The connection broke. EventSource fires an error event and schedules a reconnect automatically (default retry is about 3 seconds). Try publishing events now: they are stored, not lost.');
+    sseUI();
+    const g = S.gen;
+    clearInterval(S.retryTimer);
+    S.retryTimer = setInterval(() => {
+      if (g !== S.gen) { clearInterval(S.retryTimer); return; }
+      n--;
+      if (n > 0) { S.label.textContent = 'Connection lost. Browser retries in ' + n + 's'; }
+      else { clearInterval(S.retryTimer); sseConnect(true); }
+    }, 1000);
+  }
+
+  function sseClose() {
+    S.gen++;
+    killPackets(S.lane);
+    clearInterval(S.pingTimer); clearInterval(S.retryTimer);
+    S.state = 'closed';
+    setLane(S.lane, '', 'Closed', S.label);
+    log(S.js, 'Your code', 'source.close();\nsource.readyState === 2 (CLOSED). The browser will not reconnect.', 'muted');
+    log(S.wire, 'Browser', 'Browser closes the connection. The server notices on its next write and cleans up.', 'up');
+    S.say('Calling close() ends the stream for good. Automatic reconnect only happens for unexpected drops, not when you close it yourself.');
+    sseUI();
+  }
+
+  async function ssePost() {
+    if (S.postBusy) return;
+    S.postBusy = true;
+    S.requests++;
+    S.side.classList.add('active');
+    sseUI();
+    S.say('SSE only flows from server to browser. To send something upstream, the browser makes a separate, ordinary HTTP request that opens, gets a response, and closes.');
+    log(S.js, 'Your code', 'fetch("/orders", { method: "POST", body: JSON.stringify({ item: "tea" }) })', 'muted');
+    log(S.wire, 'Browser to server (new request)', 'POST /orders HTTP/1.1\nContent-Type: application/json\n\n{"item":"tea"}', 'up');
+    await fly(S.side, 'c2s', 'POST /orders', 'upk', 1100);
+    flash($('sse-server'));
+    log(S.wire, 'Server to browser', 'HTTP/1.1 201 Created\n(response complete, this request is finished)', 'down');
+    await fly(S.side, 's2c', '201 Created', 'http-down', 1100);
+    log(S.js, 'fetch resolved', 'response.status === 201', 'down');
+    setTimeout(() => { S.side.classList.remove('active'); S.postBusy = false; sseUI(); }, 400);
+  }
+
+  function sseReset() {
+    S.gen++;
+    clearInterval(S.pingTimer); clearInterval(S.retryTimer); clearInterval(S.autoTimer);
+    $('sse-auto').checked = false;
+    clearPackets(S.lane); clearPackets(S.side);
+    S.side.classList.remove('active');
+    Object.assign(S, { state: 'none', serverId: 0, clientId: 0, history: [], requests: 0, sample: 0, postBusy: false });
+    setLane(S.lane, '', 'No connection', S.label);
+    resetLog(S.wire, 'Traffic will appear here.');
+    resetLog(S.js, 'Events will appear here.');
+    S.say('Nothing is connected yet. Press Connect to create an EventSource and open the stream.');
+    sseUI();
+  }
+
+  $('sse-connect').addEventListener('click', () => sseConnect(false));
+  $('sse-publish').addEventListener('click', ssePublish);
+  $('sse-drop').addEventListener('click', sseDrop);
+  $('sse-close').addEventListener('click', sseClose);
+  $('sse-post').addEventListener('click', ssePost);
+  $('sse-auto').addEventListener('change', (e) => {
+    clearInterval(S.autoTimer);
+    if (e.target.checked) { ssePublish(); S.autoTimer = setInterval(ssePublish, T(2300)); }
+  });
+  sseUI();
+
+  /* =====================================================
+     WebSockets
+     ===================================================== */
+  const W = {
+    lane: $('ws-lane'), label: $('ws-pipe-label'),
+    wire: $('ws-wire'), js: $('ws-js'), say: (t) => { $('ws-say').textContent = t; },
+    state: 'none', gen: 0, requests: 0, up: 0, down: 0, lost: 0, cs: 0, ss: 0, autoTimer: null,
+  };
+  const C_MSGS = ['hi there', '{"move":"e4"}', 'typing...', '{"cursor":[120,48]}'];
+  const S_MSGS = ['welcome, player 2', '{"move":"e5"}', '{"score":[3,1]}', 'Sam joined the room'];
+  const WRS = { none: 'no WebSocket', connecting: '0 (CONNECTING)', open: '1 (OPEN)', closing: '2 (CLOSING)', closed: '3 (CLOSED)' };
+
+  function wsUI() {
+    $('ws-rs').textContent = WRS[W.state];
+    $('ws-req').textContent = String(W.requests);
+    $('ws-up').textContent = String(W.up);
+    $('ws-down').textContent = String(W.down);
+    $('ws-lost').textContent = W.lost + (W.lost === 1 ? ' message' : ' messages');
+    const open = W.state === 'open';
+    $('ws-connect').disabled = !(W.state === 'none' || W.state === 'closed');
+    ['ws-send', 'ws-bin', 'ws-close', 'ws-drop', 'ws-ping'].forEach((id) => { $(id).disabled = !open; });
+  }
+
+  async function wsConnect() {
+    const g = ++W.gen;
+    W.state = 'connecting';
+    W.requests++;
+    setLane(W.lane, 'http', 'Still HTTP: asking to upgrade', W.label);
+    wsUI();
+    log(W.js, 'Your code', 'const ws = new WebSocket("wss://game.example/play");', 'muted');
+    W.say('A WebSocket starts life as an HTTP GET request, but with Upgrade headers asking the server to switch protocols on this same connection.');
+    log(W.wire, 'Browser to server', 'GET /play HTTP/1.1\nHost: game.example\nUpgrade: websocket\nConnection: Upgrade\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\nSec-WebSocket-Version: 13', 'up');
+    const ok1 = await fly(W.lane, 'c2s', 'GET + Upgrade: websocket', 'upk');
+    if (!ok1 || g !== W.gen) return;
+    flash($('ws-server'));
+    log(W.wire, 'Server to browser', 'HTTP/1.1 101 Switching Protocols\nUpgrade: websocket\nConnection: Upgrade\nSec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\n\n(this is the last HTTP on this connection)', 'down');
+    W.say('The server agrees with 101 Switching Protocols. After this response, HTTP is finished on this connection. Both sides now speak the WebSocket framing protocol.');
+    const ok2 = await fly(W.lane, 's2c', '101 Switching Protocols', 'http-down');
+    if (!ok2 || g !== W.gen) return;
+    W.state = 'open';
+    setLane(W.lane, 'open', 'WebSocket: no more HTTP. Frames flow both ways.', W.label);
+    flash($('ws-client'));
+    log(W.js, 'open event', 'ws.readyState === 1 (OPEN)', 'down');
+    W.say('Open. Either side can send a frame at any moment, on the same connection, with no request and response pairs. Try sending from both sides.');
+    wsUI();
+  }
+
+  async function wsClientSend(binary) {
+    if (W.state !== 'open') return;
+    const g = W.gen;
+    W.up++;
+    let wire, label, srv, code;
+    if (binary) {
+      code = 'ws.send(new Uint8Array([1, 4, 0, 255]));';
+      wire = '[binary frame, FIN, masked, 4 bytes]\n01 04 00 ff';
+      label = 'binary frame (4 bytes)';
+      srv = '4 bytes: 01 04 00 ff';
+      W.say('WebSockets carry binary data natively, something SSE cannot do. Every frame sent from the browser is masked with a random key, which the protocol requires to protect proxies.');
+    } else {
+      const m = C_MSGS[W.cs++ % C_MSGS.length];
+      code = 'ws.send(\'' + m + '\');';
+      wire = '[text frame, FIN, masked]\n"' + m + '"';
+      label = 'text: ' + m;
+      srv = m;
+      W.say('The browser sends a frame on the same open connection. There are no HTTP headers here, just a few bytes of frame header and the payload. Browser-to-server frames are always masked.');
+    }
+    log(W.js, 'Your code', code, 'muted');
+    log(W.wire, 'Browser to server', wire, 'up');
+    wsUI();
+    const ok = await fly(W.lane, 'c2s', label, 'upk');
+    if (!ok || g !== W.gen) return;
+    flash($('ws-server'));
+    $('ws-srecv').textContent = srv;
+  }
+
+  async function wsServerSend() {
+    const m = S_MSGS[W.ss++ % S_MSGS.length];
+    flash($('ws-server'));
+    if (W.state !== 'open') {
+      W.lost++;
+      log(W.wire, 'Server', 'Wanted to send "' + m + '", but there is no open socket. The message is dropped.', 'bad');
+      W.say('The server has a message but no socket to send it on. WebSockets have no built-in history or replay, so unless your app stores and resends it, this message is gone.');
+      wsUI();
+      return;
+    }
+    const g = W.gen;
+    W.down++;
+    log(W.wire, 'Server to browser', '[text frame, FIN, not masked]\n"' + m + '"', 'down');
+    if (!$('ws-auto').checked) W.say('The server pushes a frame whenever it wants, without the browser asking. Server-to-browser frames are not masked.');
+    wsUI();
+    const ok = await fly(W.lane, 's2c', 'text: ' + m, 'down');
+    if (!ok || g !== W.gen) return;
+    flash($('ws-client'));
+    $('ws-crecv').textContent = m;
+    log(W.js, 'message event', 'ws.onmessage = e => ...\ne.data = "' + m + '"', 'down');
+  }
+
+  async function wsPing() {
+    if (W.state !== 'open') return;
+    const g = W.gen;
+    W.down++;
+    log(W.wire, 'Server to browser', '[ping frame] (control frame)', 'down');
+    W.say('The server sends a ping control frame to check the connection is alive. The browser answers with a pong automatically. Your JavaScript never sees either one.');
+    wsUI();
+    const ok = await fly(W.lane, 's2c', 'ping', 'ctrl', 1100);
+    if (!ok || g !== W.gen) return;
+    W.up++;
+    log(W.wire, 'Browser to server', '[pong frame] (sent automatically by the browser)', 'up');
+    log(W.js, 'Nothing fired', 'Ping and pong are handled by the browser. There is no JavaScript event for them.', 'muted');
+    wsUI();
+    const ok2 = await fly(W.lane, 'c2s', 'pong', 'ctrl', 1100);
+    if (!ok2 || g !== W.gen) return;
+    flash($('ws-server'));
+  }
+
+  async function wsClose() {
+    if (W.state !== 'open') return;
+    const g = W.gen;
+    W.state = 'closing';
+    W.up++;
+    clearInterval(W.autoTimer); $('ws-auto').checked = false;
+    log(W.js, 'Your code', 'ws.close(1000, "bye");\nws.readyState === 2 (CLOSING)', 'muted');
+    log(W.wire, 'Browser to server', '[close frame] code 1000 (normal closure), reason "bye"', 'up');
+    W.say('A clean close is a handshake too: the browser sends a close frame with a status code, and waits for the server to send one back.');
+    wsUI();
+    const ok = await fly(W.lane, 'c2s', 'close 1000', 'ctrl', 1100);
+    if (!ok || g !== W.gen) return;
+    W.down++;
+    log(W.wire, 'Server to browser', '[close frame] code 1000\nThen the TCP connection is closed.', 'down');
+    wsUI();
+    const ok2 = await fly(W.lane, 's2c', 'close 1000', 'ctrl', 1100);
+    if (!ok2 || g !== W.gen) return;
+    W.state = 'closed';
+    setLane(W.lane, '', 'Closed', W.label);
+    log(W.js, 'close event', '{ code: 1000, reason: "bye", wasClean: true }', 'down');
+    W.say('Closed cleanly. To talk again, the browser must create a new WebSocket, which means a new handshake.');
+    wsUI();
+  }
+
+  function wsDrop() {
+    if (W.state !== 'open') return;
+    W.gen++;
+    killPackets(W.lane);
+    W.state = 'closed';
+    setLane(W.lane, 'broken', 'Connection lost. Nothing reconnects automatically.', W.label);
+    log(W.wire, 'Network', 'TCP connection lost. No close frames were exchanged.', 'bad');
+    log(W.js, 'error event, then close event', '{ code: 1006, reason: "", wasClean: false }\nThe browser does NOT reconnect. Your code has to do it.', 'bad');
+    W.say('The connection died without a close handshake, so you get code 1006. Unlike EventSource, a WebSocket never reconnects by itself, and frames in flight were lost. Try sending from the server now, then press Connect.');
+    wsUI();
+  }
+
+  function wsReset() {
+    W.gen++;
+    clearInterval(W.autoTimer); $('ws-auto').checked = false;
+    clearPackets(W.lane);
+    Object.assign(W, { state: 'none', requests: 0, up: 0, down: 0, lost: 0, cs: 0, ss: 0 });
+    $('ws-crecv').textContent = 'nothing';
+    $('ws-srecv').textContent = 'nothing';
+    setLane(W.lane, '', 'No connection', W.label);
+    resetLog(W.wire, 'Traffic will appear here.');
+    resetLog(W.js, 'Events will appear here.');
+    W.say('Nothing is connected yet. Press Connect to start the WebSocket handshake.');
+    wsUI();
+  }
+
+  $('ws-connect').addEventListener('click', wsConnect);
+  $('ws-send').addEventListener('click', () => wsClientSend(false));
+  $('ws-bin').addEventListener('click', () => wsClientSend(true));
+  $('ws-push').addEventListener('click', wsServerSend);
+  $('ws-ping').addEventListener('click', wsPing);
+  $('ws-close').addEventListener('click', wsClose);
+  $('ws-drop').addEventListener('click', wsDrop);
+  $('ws-auto').addEventListener('change', (e) => {
+    clearInterval(W.autoTimer);
+    if (e.target.checked) { wsServerSend(); W.autoTimer = setInterval(wsServerSend, T(2300)); }
+  });
+  wsUI();
+
+  /* ---------- Toolbar: speed + reset ---------- */
+  document.querySelectorAll('button[data-speed]').forEach((b) => b.addEventListener('click', () => {
+    window.SIM.speed = parseFloat(b.dataset.speed);
+    // restart running timers so they pick up the new speed
+    if ($('sse-auto').checked) { clearInterval(S.autoTimer); S.autoTimer = setInterval(ssePublish, T(2300)); }
+    if ($('ws-auto').checked) { clearInterval(W.autoTimer); W.autoTimer = setInterval(wsServerSend, T(2300)); }
+    if (S.state === 'open') { const g = S.gen; clearInterval(S.pingTimer); S.pingTimer = setInterval(() => ssePing(g), T(9000)); }
+  }));
+  $('reset-btn').addEventListener('click', () => {
+    if (!$('panel-sse').hidden) sseReset(); else if (!$('panel-ws').hidden) wsReset();
+  });
+})();
+</script>
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const T = (ms) => ms * window.SIM.speed;
+  const wait = (ms) => new Promise((r) => setTimeout(r, T(ms)));
+
+  /* ---------- Tabs ---------- */
+  const tabs = Array.from(document.querySelectorAll('.tab'));
+  tabs.forEach((t) => t.addEventListener('click', () => {
+    tabs.forEach((x) => { const on = x === t; x.setAttribute('aria-selected', on); $(x.getAttribute('aria-controls')).hidden = !on; });
+  }));
+
+  /* ---------- Shared helpers ---------- */
+  function log(el, tag, body, kind) {
+    const empty = el.querySelector('.empty'); if (empty) empty.remove();
+    const e = document.createElement('div'); e.className = 'entry ' + (kind || '');
+    const t = document.createElement('span'); t.className = 'tag'; t.textContent = tag;
+    const pre = document.createElement('pre'); pre.textContent = body;
+    e.append(t, pre); el.appendChild(e);
+    while (el.children.length > 90) el.removeChild(el.firstChild);
+    el.scrollTop = el.scrollHeight;
+  }
+  function resetLog(el, text) { el.innerHTML = ''; const d = document.createElement('div'); d.className = 'empty'; d.textContent = text; el.appendChild(d); }
+  function flash(el) { el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
+
+  /* ---------- Ladder diagram ---------- */
+  function Ladder(root, cols, insp) {
+    this.n = cols.length; this.insp = insp; this.streams = []; this.sel = null; this.st = [];
+    root.style.setProperty('--n', this.n);
+    const head = document.createElement('div'); head.className = 'lhead';
+    cols.forEach((c) => {
+      const d = document.createElement('div'); d.className = 'lcol';
+      const h = document.createElement('h3'); h.textContent = c;
+      const s = document.createElement('span'); s.className = 'lst'; s.textContent = '';
+      d.append(h, s); head.appendChild(d); this.st.push(s);
+    });
+    this.body = document.createElement('div'); this.body.className = 'lbody';
+    this.track = document.createElement('div'); this.track.className = 'ltrack';
+    this.body.appendChild(this.track); root.append(head, this.body);
+    this.clear();
+  }
+  Ladder.prototype.x = function (i) { return (i + 0.5) / this.n * 100; };
+  Ladder.prototype.clear = function () {
+    this.streams.forEach((s) => clearInterval(s.timer)); this.streams = [];
+    this.track.innerHTML = '';
+    for (let i = 0; i < this.n; i++) { const l = document.createElement('div'); l.className = 'lifeline'; l.style.left = this.x(i) + '%'; this.track.appendChild(l); }
+    const e = document.createElement('p'); e.className = 'lempty'; e.textContent = 'Messages will be drawn here, top to bottom, as they happen.'; this.track.appendChild(e);
+    this.sel = null;
+    this.insp.title.textContent = 'No message selected';
+    this.insp.body.textContent = 'Click any arrow in the diagram to see the full message here.';
+  };
+  Ladder.prototype.add = function (el) { const e = this.track.querySelector('.lempty'); if (e) e.remove(); this.track.appendChild(el); this.body.scrollTop = this.body.scrollHeight; };
+  Ladder.prototype.select = function (row, title, detail) {
+    if (this.sel) this.sel.classList.remove('sel');
+    this.sel = row; row.classList.add('sel');
+    this.insp.title.textContent = title; this.insp.body.textContent = detail; this.insp.body.scrollTop = 0;
+  };
+  Ladder.prototype.status = function (i, t) { this.st[i].textContent = t; };
+  Ladder.prototype.msg = function (o) {
+    return new Promise((resolve) => {
+      const x1 = this.x(o.from), x2 = this.x(o.to), ltr = x2 > x1;
+      const endX = o.failAt != null ? x1 + (x2 - x1) * o.failAt : x2;
+      const row = document.createElement('button'); row.type = 'button'; row.className = 'lrow k-' + (o.kind || 'req');
+      const arrow = document.createElement('div'); arrow.className = 'arrow';
+      arrow.style.left = Math.min(x1, endX) + '%'; arrow.style.width = Math.abs(endX - x1) + '%';
+      arrow.style.transformOrigin = ltr ? 'left' : 'right';
+      const lab = document.createElement('span'); lab.className = 'alabel'; lab.textContent = o.label; lab.style.left = ((x1 + x2) / 2) + '%';
+      row.append(arrow, lab);
+      if (o.via != null) { const v = document.createElement('span'); v.className = 'via'; v.style.left = this.x(o.via) + '%'; row.appendChild(v); }
+      const dot = document.createElement('span'); dot.className = 'ldot'; dot.style.left = x1 + '%'; row.appendChild(dot);
+      const title = o.title || o.label, detail = o.detail || '';
+      row.addEventListener('click', () => this.select(row, title, detail));
+      this.add(row); this.select(row, title, detail);
+      const d = T(o.dur || 1300), ease = 'cubic-bezier(.45,.05,.3,1)';
+      arrow.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: d, easing: ease, fill: 'both' });
+      const a = dot.animate([{ left: x1 + '%' }, { left: endX + '%' }], { duration: d, easing: ease, fill: 'forwards' });
+      a.onfinish = () => {
+        dot.remove();
+        if (o.failAt != null) {
+          const x = document.createElement('span'); x.className = 'failx'; x.textContent = '✕'; x.style.left = endX + '%'; row.appendChild(x); resolve(false);
+        } else {
+          const h = document.createElement('span'); h.className = 'ahead ' + (ltr ? 'r' : 'l');
+          h.style.left = ltr ? 'calc(' + x2 + '% - 10px)' : x2 + '%'; row.appendChild(h); resolve(true);
+        }
+      };
+    });
+  };
+  Ladder.prototype.stream = function (o) {
+    const xs = o.path.map((i) => this.x(i)), a = xs[0], b = xs[xs.length - 1];
+    const row = document.createElement('button'); row.type = 'button'; row.className = 'lrow stream k-media';
+    const band = document.createElement('div'); band.className = 'band'; band.style.left = a + '%'; band.style.width = (b - a) + '%';
+    const lab = document.createElement('span'); lab.className = 'alabel'; lab.textContent = o.label; lab.style.left = ((a + b) / 2) + '%';
+    row.append(band, lab);
+    o.path.slice(1, -1).forEach((i) => { const v = document.createElement('span'); v.className = 'via'; v.style.left = this.x(i) + '%'; v.style.top = '25px'; row.appendChild(v); });
+    row.addEventListener('click', () => this.select(row, o.title || o.label, o.detail || ''));
+    this.add(row); this.select(row, o.title || o.label, o.detail || '');
+    let fwd = true;
+    const s = { row };
+    s.timer = setInterval(() => {
+      const d = document.createElement('span'); d.className = 'sdot ' + (fwd ? 'f' : 'b'); row.appendChild(d);
+      const kf = fwd ? [{ left: a + '%' }, { left: b + '%' }] : [{ left: b + '%' }, { left: a + '%' }];
+      d.animate(kf, { duration: T(1500), easing: 'linear' }).onfinish = () => d.remove();
+      fwd = !fwd;
+    }, T(380));
+    s.stop = (text) => { clearInterval(s.timer); row.classList.add('stopped'); lab.textContent = text; };
+    this.streams.push(s);
+    return s;
+  };
+  Ladder.prototype.note = function (text) {
+    const d = document.createElement('div'); d.className = 'lnote';
+    const s = document.createElement('span'); s.textContent = text; d.appendChild(s); this.add(d);
+  };
+
+  /* =====================================================
+     WebRTC
+     ===================================================== */
+  const RL = new Ladder($('rtc-ladder'), ['Peer A (browser)', 'Signaling server', 'STUN / TURN server', 'Peer B (browser)'], { title: $('rtc-insp-title'), body: $('rtc-insp') });
+  const W = { gen: 0, busy: false, step: 0, strict: false, stream: null, inCall: false, ended: false, log: $('rtc-log'), say: (t) => { $('rtc-say').textContent = t; } };
+  const A = 0, SIG = 1, ST = 2, B = 3;
+
+  const OFFER_SDP = '{"type": "offer", "sdp":\n' +
+    'v=0\no=- 4611731400430051336 2 IN IP4 127.0.0.1\ns=-\nt=0 0\na=group:BUNDLE 0 1 2\n' +
+    'm=audio 9 UDP/TLS/RTP/SAVPF 111\nc=IN IP4 0.0.0.0\na=mid:0\na=ice-ufrag:F7gI\na=ice-pwd:x9cml/YzichV2+XlhiMu8g\n' +
+    'a=fingerprint:sha-256 D1:2C:BE:AD:7A:51:...:4F\na=setup:actpass\na=rtpmap:111 opus/48000/2\n' +
+    'm=video 9 UDP/TLS/RTP/SAVPF 96\na=mid:1\na=rtpmap:96 VP8/90000\n' +
+    'm=application 9 UDP/DTLS/SCTP webrtc-datachannel\na=mid:2\n}\n\n' +
+    'What matters:\n  m= lines       audio (Opus), video (VP8) and a data channel\n  ice-ufrag/pwd  credentials for the connectivity checks later\n  fingerprint    hash of Peer A\'s DTLS certificate\n  SAVPF          secure RTP: media will always be encrypted (SRTP)\n\nNo addresses yet: those arrive separately as ICE candidates.';
+  const ANSWER_SDP = '{"type": "answer", "sdp":\n' +
+    'v=0\no=- 2875216342887411264 2 IN IP4 127.0.0.1\ns=-\nt=0 0\na=group:BUNDLE 0 1 2\n' +
+    'm=audio 9 UDP/TLS/RTP/SAVPF 111\nc=IN IP4 0.0.0.0\na=mid:0\na=ice-ufrag:Kp3s\na=ice-pwd:Qe0r1nV7cWm2LtsZ9yA4pB\n' +
+    'a=fingerprint:sha-256 7E:90:13:C4:22:AF:...:B8\na=setup:active\na=rtpmap:111 opus/48000/2\n' +
+    'm=video 9 UDP/TLS/RTP/SAVPF 96\na=mid:1\na=rtpmap:96 VP8/90000\n' +
+    'm=application 9 UDP/DTLS/SCTP webrtc-datachannel\na=mid:2\n}\n\n' +
+    'Peer B accepts Opus, VP8 and the data channel.\na=setup:active means Peer B will start the DTLS handshake later.';
+
+  const RTC_STEPS = [
+    { name: 'Both join the room', run: rtcJoin },
+    { name: 'Peer A creates an offer', run: rtcOffer },
+    { name: 'Peer B sends an answer', run: rtcAnswer },
+    { name: 'Gather ICE candidates', run: rtcGather },
+    { name: 'Connectivity checks', run: rtcChecks },
+    { name: 'DTLS handshake', run: rtcDtls },
+    { name: 'Media starts flowing', run: rtcMedia },
+  ];
+
+  function rtcUI() {
+    const done = W.step >= RTC_STEPS.length;
+    const nb = $('rtc-next');
+    nb.textContent = done ? 'All steps done' : 'Next step: ' + RTC_STEPS[W.step].name;
+    nb.disabled = W.busy || done;
+    $('rtc-all').disabled = W.busy || done;
+    $('rtc-dc').disabled = W.busy || !W.inCall;
+    $('rtc-hang').disabled = W.busy || !W.inCall;
+    $('rtc-nat').querySelectorAll('button').forEach((b) => { b.disabled = W.busy || W.step >= 3; b.setAttribute('aria-pressed', (b.dataset.nat === 'strict') === W.strict); });
+  }
+  async function rtcRun(fn) {
+    if (W.busy) return;
+    W.busy = true; rtcUI();
+    const g = W.gen;
+    try { await fn(g); } finally { if (g === W.gen) { W.busy = false; rtcUI(); } }
+  }
+  const rm = async (g, o) => { await RL.msg(o); return g === W.gen; };
+
+  async function rtcStep(g) {
+    const s = RTC_STEPS[W.step];
+    await s.run(g);
+    if (g === W.gen) W.step++;
+  }
+
+  async function rtcJoin(g) {
+    W.say('WebRTC does not define how peers find each other. The app supplies a signaling channel, very often a WebSocket server. Its only job is to pass messages between the peers until they can reach each other directly.');
+    log(W.log, 'Peer A', 'const ws = new WebSocket("wss://signal.example/room/standup");', 'up');
+    if (!await rm(g, { from: A, to: SIG, label: 'join room', kind: 'req', title: 'Peer A joins the room (WebSocket message)', detail: '{"type": "join", "room": "standup", "from": "peer-a"}\n\nWebRTC does not specify signaling. This could be a WebSocket, HTTP requests, or even copy and paste. The server just passes messages along.' })) return;
+    RL.status(A, 'In room'); RL.status(SIG, 'Room: 1 peer');
+    log(W.log, 'Peer B', 'const ws = new WebSocket("wss://signal.example/room/standup");', 'up');
+    if (!await rm(g, { from: B, to: SIG, label: 'join room', kind: 'req', title: 'Peer B joins the room', detail: '{"type": "join", "room": "standup", "from": "peer-b"}' })) return;
+    RL.status(B, 'In room'); RL.status(SIG, 'Room: 2 peers');
+    if (!await rm(g, { from: SIG, to: A, label: 'peer joined', kind: 'resp', title: 'Server tells Peer A someone joined', detail: '{"type": "peer-joined", "peer": "peer-b"}\n\nPeer A decides to start the call.' })) return;
+  }
+
+  async function rtcOffer(g) {
+    W.say('Peer A describes what it wants to send and receive as an SDP offer: codecs, ICE credentials and the fingerprint of its encryption certificate. The signaling server forwards it without understanding it. SDP is the same format SIP uses.');
+    log(W.log, 'Peer A', 'const pc = new RTCPeerConnection({ iceServers: [\n  { urls: "stun:stun.example.org" },\n  { urls: "turn:turn.example.org", username: "u", credential: "p" }\n]});\nconst stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });\nstream.getTracks().forEach(t => pc.addTrack(t, stream));\nconst chat = pc.createDataChannel("chat");\nconst offer = await pc.createOffer();\nawait pc.setLocalDescription(offer);\nws.send(JSON.stringify(offer));', 'up');
+    RL.status(A, 'Offer created');
+    if (!await rm(g, { from: A, to: SIG, label: 'offer (SDP)', kind: 'req', title: 'SDP offer from Peer A', detail: OFFER_SDP })) return;
+    if (!await rm(g, { from: SIG, to: B, label: 'offer (SDP)', kind: 'req', title: 'Server forwards the offer to Peer B', detail: OFFER_SDP })) return;
+    log(W.log, 'Peer B', 'const pc = new RTCPeerConnection({ iceServers: [...] });\nawait pc.setRemoteDescription(offer);', 'down');
+    RL.status(B, 'Has offer');
+  }
+
+  async function rtcAnswer(g) {
+    W.say('Peer B replies with an SDP answer: the codecs it accepts, plus its own credentials and fingerprint. The peers now agree on what to send, but they still have no idea how to reach each other.');
+    log(W.log, 'Peer B', 'const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });\nstream.getTracks().forEach(t => pc.addTrack(t, stream));\nconst answer = await pc.createAnswer();\nawait pc.setLocalDescription(answer);\nws.send(JSON.stringify(answer));', 'up');
+    if (!await rm(g, { from: B, to: SIG, label: 'answer (SDP)', kind: 'req', title: 'SDP answer from Peer B', detail: ANSWER_SDP })) return;
+    if (!await rm(g, { from: SIG, to: A, label: 'answer (SDP)', kind: 'req', title: 'Server forwards the answer to Peer A', detail: ANSWER_SDP })) return;
+    log(W.log, 'Peer A', 'await pc.setRemoteDescription(answer);', 'down');
+    RL.status(A, 'Offer/answer done'); RL.status(B, 'Offer/answer done');
+  }
+
+  async function rtcGather(g) {
+    W.say('Each browser asks a STUN server what its address looks like from outside its home router. Every address it finds becomes a candidate, sent to the other peer through signaling one at a time (trickle ICE).' + (W.strict ? ' Peer B is behind a strict NAT, so it also reserves a relay address on the TURN server as a fallback.' : ''));
+    RL.status(A, 'Gathering'); RL.status(B, 'Gathering');
+    if (!await rm(g, { from: A, to: ST, label: 'STUN: my address?', kind: 'stun', title: 'STUN Binding Request from Peer A', detail: 'STUN Binding Request, UDP to stun.example.org:3478\nSent from Peer A\'s local address 192.168.1.23:54400\n\nIn plain words: "What address do you see this packet coming from?"' })) return;
+    if (!await rm(g, { from: ST, to: A, label: 'you are 203.0.113.5:61002', kind: 'stun', title: 'STUN Binding Success Response', detail: 'STUN Binding Success Response\nXOR-MAPPED-ADDRESS: 203.0.113.5:61002\n\nPeer A\'s home router (NAT) rewrote the source address on the way out. This public address becomes a "server reflexive" (srflx) candidate.' })) return;
+    if (!await rm(g, { from: B, to: ST, label: 'STUN: my address?', kind: 'stun', title: 'STUN Binding Request from Peer B', detail: 'STUN Binding Request, UDP to stun.example.org:3478\nSent from Peer B\'s local address 10.0.0.8:50120' })) return;
+    if (!await rm(g, { from: ST, to: B, label: 'you are 198.51.100.44:50120', kind: 'stun', title: 'STUN Binding Success Response', detail: 'STUN Binding Success Response\nXOR-MAPPED-ADDRESS: 198.51.100.44:50120\n\n' + (W.strict ? 'Peer B\'s NAT is strict (symmetric): it picks a different public port for every destination. This address only works for replies from the STUN server itself, which will matter in the next step.' : 'Peer B\'s srflx candidate.') })) return;
+    if (W.strict) {
+      if (!await rm(g, { from: B, to: ST, label: 'TURN: Allocate', kind: 'stun', title: 'TURN Allocate Request', detail: 'TURN Allocate Request (authenticated with the username and password from iceServers)\n\nIn plain words: "Reserve an address on your server for me, and forward anything sent there."' })) return;
+      if (!await rm(g, { from: ST, to: B, label: 'relay at 192.0.2.80:49152', kind: 'stun', title: 'TURN Allocate Success', detail: 'TURN Allocate Success Response\nXOR-RELAYED-ADDRESS: 192.0.2.80:49152\n\nAnything sent to this address on the TURN server is forwarded to Peer B. This is a "relay" candidate: it works through any NAT, but every packet takes a detour through the server.' })) return;
+      RL.status(ST, 'Relay reserved for B');
+    }
+    log(W.log, 'Peer A', 'pc.onicecandidate = e => {\n  if (e.candidate) ws.send(JSON.stringify(e.candidate));\n};\n// fires once for each candidate the browser finds', 'up');
+    const aCands = '{"candidate": "candidate:1 1 udp 2122260223 192.168.1.23 54400 typ host"}\n{"candidate": "candidate:2 1 udp 1686052607 203.0.113.5 61002 typ srflx raddr 192.168.1.23 rport 54400"}\n\nhost   = Peer A\'s address on its own home network\nsrflx  = the public address the STUN server saw\nThe big number is a priority: ICE prefers direct paths.';
+    if (!await rm(g, { from: A, to: SIG, label: 'ICE candidates', kind: 'req', title: 'Peer A\'s candidates (trickle ICE)', detail: aCands })) return;
+    if (!await rm(g, { from: SIG, to: B, label: 'ICE candidates', kind: 'req', title: 'Forwarded to Peer B', detail: aCands })) return;
+    log(W.log, 'Peer B', 'await pc.addIceCandidate(candidate);  // for each one received', 'down');
+    let bCands = '{"candidate": "candidate:1 1 udp 2122260223 10.0.0.8 50120 typ host"}\n{"candidate": "candidate:2 1 udp 1686052607 198.51.100.44 50120 typ srflx raddr 10.0.0.8 rport 50120"}';
+    if (W.strict) bCands += '\n{"candidate": "candidate:3 1 udp 41885439 192.0.2.80 49152 typ relay raddr 198.51.100.44 rport 50120"}\n\nrelay  = the address reserved on the TURN server (lowest priority: only used if nothing else works)';
+    if (!await rm(g, { from: B, to: SIG, label: 'ICE candidates', kind: 'req', title: 'Peer B\'s candidates', detail: bCands })) return;
+    if (!await rm(g, { from: SIG, to: A, label: 'ICE candidates', kind: 'req', title: 'Forwarded to Peer A', detail: bCands })) return;
+    log(W.log, 'Peer A', 'await pc.addIceCandidate(candidate);  // for each one received', 'down');
+    RL.status(A, 'Has candidates'); RL.status(B, 'Has candidates');
+  }
+
+  async function rtcChecks(g) {
+    W.say('The peers now test candidate pairs by sending STUN checks straight to each other. Watch which ones get through.');
+    log(W.log, 'Both peers', 'pc.iceConnectionState === "checking"', 'muted');
+    RL.status(A, 'Checking'); RL.status(B, 'Checking');
+    if (!await rm(g, { from: A, to: B, label: 'check: host → host', kind: 'fail', failAt: 0.62, title: 'Connectivity check: host candidates (fails)', detail: 'STUN Binding Request to 10.0.0.8:50120 (Peer B\'s host candidate)\nUSERNAME: Kp3s:F7gI   MESSAGE-INTEGRITY: signed with ice-pwd\n\nResult: no reply. 10.0.0.8 is a private address on Peer B\'s home network. It means nothing on Peer A\'s network.' }) && g !== W.gen) return;
+    if (g !== W.gen) return;
+    if (!W.strict) {
+      if (!await rm(g, { from: A, to: B, label: 'check: srflx → srflx', kind: 'stun', title: 'Connectivity check: public addresses', detail: 'STUN Binding Request to 198.51.100.44:50120 (Peer B\'s srflx candidate)\n\nBoth peers send checks to each other at about the same time. Each outgoing packet opens a short-lived hole in its own NAT, so the other side\'s packet can get in. This is UDP hole punching.' })) return;
+      if (!await rm(g, { from: B, to: A, label: 'check response ✓', kind: 'resp', title: 'Check succeeds', detail: 'STUN Binding Success Response\n\nThis pair works. Peer B runs the same checks in the other direction, then ICE nominates this pair:\n  203.0.113.5:61002  <->  198.51.100.44:50120' })) return;
+      W.say('Private host addresses fail across the internet, but the public srflx pair works: the checks punched holes through both NATs. ICE picks this direct path.');
+      log(W.log, 'Both peers', 'pc.iceConnectionState === "connected"\n// selected pair: srflx 203.0.113.5:61002 <-> srflx 198.51.100.44:50120', 'down');
+    } else {
+      if (!await rm(g, { from: A, to: B, label: 'check: srflx → srflx', kind: 'fail', failAt: 0.85, title: 'Connectivity check: public addresses (fails)', detail: 'STUN Binding Request to 198.51.100.44:50120\n\nResult: dropped by Peer B\'s strict NAT. That public port was opened for the STUN server only. Packets from any other address are thrown away.' }) && g !== W.gen) return;
+      if (g !== W.gen) return;
+      if (!await rm(g, { from: A, to: B, via: ST, label: 'check via TURN relay', kind: 'stun', title: 'Connectivity check through the relay', detail: 'STUN Binding Request to 192.0.2.80:49152 (Peer B\'s relay candidate)\nThe TURN server forwards it to Peer B.' })) return;
+      if (!await rm(g, { from: B, to: A, via: ST, label: 'check response ✓', kind: 'resp', title: 'Check succeeds via relay', detail: 'STUN Binding Success Response, forwarded back by the TURN server.\n\nICE nominates the relay pair. All media will go through the TURN server.' })) return;
+      W.say('Direct pairs failed because Peer B\'s strict NAT drops packets from addresses it hasn\'t contacted. ICE falls back to the relay candidate. This always works, but the TURN operator pays for all the bandwidth, which is why apps only use it when direct paths fail.');
+      log(W.log, 'Both peers', 'pc.iceConnectionState === "connected"\n// selected pair: srflx 203.0.113.5:61002 <-> relay 192.0.2.80:49152', 'down');
+      RL.status(ST, 'Relaying');
+    }
+  }
+
+  async function rtcDtls(g) {
+    const via = W.strict ? ST : null;
+    W.say('Before any media flows, the peers run a DTLS handshake (TLS for UDP) over the chosen path. Each side checks the other\'s certificate against the fingerprint from the SDP. The keys from this handshake encrypt the media as SRTP. WebRTC media is always encrypted.');
+    log(W.log, 'Both peers', 'pc.connectionState === "connecting"', 'muted');
+    if (!await rm(g, { from: B, to: A, via, label: 'DTLS ClientHello', kind: 'dtls', title: 'DTLS ClientHello', detail: 'Peer B starts the handshake because its answer said a=setup:active.' })) return;
+    if (!await rm(g, { from: A, to: B, via, label: 'ServerHello, Certificate', kind: 'dtls', title: 'DTLS ServerHello + Certificate', detail: 'Peer A sends its self-signed certificate.\nPeer B hashes it and compares it with the a=fingerprint line from Peer A\'s offer. Match: this really is the peer from the signaling.' })) return;
+    if (!await rm(g, { from: B, to: A, via, label: 'Certificate, Finished', kind: 'dtls', title: 'DTLS Certificate + Finished', detail: 'Peer B sends its certificate. Peer A checks it against the fingerprint in Peer B\'s answer.' })) return;
+    if (!await rm(g, { from: A, to: B, via, label: 'Finished', kind: 'dtls', title: 'DTLS Finished', detail: 'Handshake complete.\n\nBoth sides derive SRTP keys from it (this scheme is called DTLS-SRTP).\nThe fingerprint check is what ties encryption to signaling: someone in the middle cannot swap in their own certificate without also changing the SDP.' })) return;
+    log(W.log, 'Both peers', 'pc.connectionState === "connected"', 'down');
+    RL.status(A, 'Connected'); RL.status(B, 'Connected');
+  }
+
+  async function rtcMedia(g) {
+    const path = W.strict ? [A, ST, B] : [A, B];
+    W.stream = RL.stream({
+      path,
+      label: W.strict ? 'SRTP audio + video, via TURN relay' : 'SRTP audio + video, peer to peer',
+      title: 'Media: SRTP ' + (W.strict ? 'through the TURN relay' : 'directly between the browsers'),
+      detail: 'SRTP = RTP packets with encrypted payloads (see the RTP tab for what the header holds).\n\nAudio: Opus, about 50 packets per second\nVideo: VP8, a frame is split across many packets\nData channel: SCTP inside DTLS\nAll of it shares one UDP port pair (BUNDLE).\n\nRTCP feedback flows too: receiver reports, NACKs (resend requests, used for video), and requests for a new keyframe.' + (W.strict ? '\n\nPath: Peer A -> TURN server 192.0.2.80 -> Peer B' : '\n\nPath: 203.0.113.5:61002 <-> 198.51.100.44:50120, nothing in between but routers.'),
+    });
+    RL.note('The signaling server is not involved from here on');
+    RL.status(SIG, 'Idle'); RL.status(A, 'In call'); RL.status(B, 'In call');
+    log(W.log, 'Peer A', 'pc.ontrack = e => { remoteVideo.srcObject = e.streams[0]; };  // fired: B\'s audio and video', 'down');
+    log(W.log, 'Peer B', 'pc.ontrack = e => { remoteVideo.srcObject = e.streams[0]; };\npc.ondatachannel = e => { chat = e.channel; };', 'down');
+    W.say(W.strict
+      ? 'Media flows as SRTP through the TURN relay. The signaling server is idle; it never touches the media. Try a chat message, or hang up. To compare, reset and run it again with regular home routers.'
+      : 'Media flows as SRTP straight between the browsers. The signaling server is idle; it never touches the media. Try a chat message, or hang up. Then reset and pick the strict NAT option to see the TURN fallback.');
+    W.inCall = true;
+    await wait(200);
+  }
+
+  async function rtcDataChannel(g) {
+    log(W.log, 'Peer A', 'chat.send("hi!");', 'up');
+    W.say('Data channel messages travel on the same connection as the media, encrypted by the same DTLS session. They are reliable and ordered by default, like a WebSocket, but peer to peer.');
+    if (!await rm(g, { from: A, to: B, via: W.strict ? ST : null, label: 'DataChannel: "hi!"', kind: 'data', title: 'Data channel message', detail: 'SCTP message, inside DTLS, inside UDP\nChannel: "chat"   Payload: "hi!"\n\nReliable and ordered by default. Can be set to unordered or no-retransmit for game state and similar data.' })) return;
+    log(W.log, 'Peer B', 'chat.onmessage = e => { ... };  // e.data === "hi!"', 'down');
+  }
+
+  async function rtcHangup(g) {
+    log(W.log, 'Peer A', 'pc.close();\nws.send(JSON.stringify({ type: "bye" }));', 'up');
+    if (W.stream) W.stream.stop('Media stopped');
+    W.inCall = false;
+    RL.status(A, 'Closed');
+    if (!await rm(g, { from: A, to: SIG, label: 'bye', kind: 'req', title: 'Hang up message', detail: '{"type": "bye"}\n\npc.close() also sends a DTLS close alert, so Peer B notices quickly even without this message. The bye is mostly so the app can update its interface.' })) return;
+    if (!await rm(g, { from: SIG, to: B, label: 'bye', kind: 'req', title: 'Forwarded to Peer B', detail: '{"type": "bye"}' })) return;
+    log(W.log, 'Peer B', 'pc.close();', 'down');
+    RL.status(B, 'Closed'); RL.status(ST, '');
+    W.say('Call over. Press Reset to start again, for example with the other network option.');
+  }
+
+  function rtcReset() {
+    W.gen++;
+    RL.clear();
+    Object.assign(W, { busy: false, step: 0, stream: null, inCall: false });
+    [A, SIG, ST, B].forEach((i) => RL.status(i, ''));
+    resetLog(W.log, 'Code will appear here.');
+    W.say('Two browsers want a video call. Step through how they find each other, agree on media, get through their home routers, and start sending encrypted audio and video directly to each other.');
+    rtcUI();
+  }
+
+  $('rtc-next').addEventListener('click', () => rtcRun((g) => rtcStep(g)));
+  $('rtc-all').addEventListener('click', () => rtcRun(async (g) => {
+    while (W.step < RTC_STEPS.length && g === W.gen) { await rtcStep(g); if (g === W.gen) { rtcUI(); await wait(500); } }
+  }));
+  $('rtc-dc').addEventListener('click', () => rtcRun(rtcDataChannel));
+  $('rtc-hang').addEventListener('click', () => rtcRun(rtcHangup));
+  $('rtc-nat').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { W.strict = b.dataset.nat === 'strict'; rtcUI(); }));
+  rtcUI();
+
+  /* =====================================================
+     RTP
+     ===================================================== */
+  const R = {
+    gen: 0, running: false, talking: true, loss: false, jitter: false, depth: 1,
+    ssrc: '0x5A3F91C2', seq: 23110, ts: 1930472, marker: true,
+    sendTimer: null, playTimer: null, rrTimer: null,
+    buf: new Map(), next: null, playing: false,
+    recv: 0, first: null, high: null, late: 0, conceal: 0, jit: 0, lastArr: null, lastTs: null,
+    rrExp: 0, rrRecv: 0, pinned: false,
+    lane: $('rtp-lane'), log: $('rtp-log'), say: (t) => { $('rtp-say').textContent = t; },
+  };
+  const SEND_MS = 450;
+
+  function rtpFly(label, kind, dur, row, lossAt, ltr) {
+    return new Promise((resolve) => {
+      const lane = R.lane;
+      const p = document.createElement('div'); p.className = 'pkt ' + kind + ' ' + row; p.textContent = label; lane.appendChild(p);
+      const w = Math.max(0, lane.clientWidth - p.offsetWidth);
+      const from = ltr ? 0 : w, full = ltr ? w : 0;
+      const to = lossAt != null ? from + (full - from) * lossAt : full;
+      p.style.transform = 'translateX(' + from + 'px)';
+      const a = p.animate([{ transform: 'translateX(' + from + 'px)' }, { transform: 'translateX(' + to + 'px)' }], { duration: T(dur) * (lossAt != null ? lossAt : 1), easing: 'linear', fill: 'forwards' });
+      a.onfinish = () => {
+        if (lossAt != null) {
+          p.classList.add('lost'); p.textContent = '✕ ' + label;
+          setTimeout(() => p.classList.add('gone'), T(250));
+          setTimeout(() => p.remove(), T(250) + 450);
+          resolve(false);
+        } else { p.classList.add('gone'); setTimeout(() => p.remove(), 400); resolve(true); }
+      };
+    });
+  }
+
+  function pktDetail(p) {
+    return 'RTP header (12 bytes)\n' +
+      'V=2  P=0  X=0  CC=0\n' +
+      'M=' + p.m + (p.m ? '      marker: first packet of a talk spurt' : '') + '\n' +
+      'PT=111       payload type: Opus, as agreed in the SDP\n' +
+      'seq=' + p.seq + '    sequence number: +1 per packet, reveals loss and reordering\n' +
+      'ts=' + p.ts + '   timestamp: +960 per packet = 20 ms of audio at 48 kHz\n' +
+      'SSRC=' + R.ssrc + '  identifies this stream\n\n' +
+      'Payload: 20 ms of Opus-encoded audio (about 80 bytes)\n\n' +
+      'Carried as: RTP inside UDP inside IP. No handshake, no acknowledgements, no retransmission.';
+  }
+  function inspect(title, detail, force) {
+    if (R.pinned && !force) return;
+    $('rtp-insp-title').textContent = title;
+    $('rtp-insp').textContent = detail;
+  }
+
+  function rtpUI() {
+    $('rtp-sstate').textContent = !R.running ? 'stopped' : (R.talking ? 'sending' : 'silent (not sending)');
+    $('rtp-sseq').textContent = String(R.seq);
+    $('rtp-sts').textContent = String(R.ts);
+    const expected = R.first === null ? 0 : R.high - R.first + 1;
+    $('rtp-recv').textContent = String(R.recv);
+    $('rtp-lost').textContent = String(Math.max(0, expected - R.recv));
+    $('rtp-late').textContent = String(R.late);
+    $('rtp-jit').textContent = R.jit.toFixed(1) + ' ms';
+    $('rtp-start').disabled = R.running;
+    $('rtp-stop').disabled = !R.running;
+    $('rtp-pipe-label').textContent = R.running ? 'UDP: no connection, no retransmission' : 'Not streaming';
+    R.lane.classList.toggle('open', R.running);
+    $('rtp-depth').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', +b.dataset.depth === R.depth));
+  }
+
+  function renderBuf() {
+    const el = $('rtp-slots'); el.innerHTML = '';
+    const keys = Array.from(R.buf.keys()).sort((a, b) => a - b);
+    if (!keys.length) { const s = document.createElement('span'); s.className = 'none'; s.textContent = 'Empty'; el.appendChild(s); }
+    keys.forEach((k) => {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'slot' + (k === R.next ? ' next' : ''); b.textContent = '#' + k;
+      b.addEventListener('click', () => { const p = R.buf.get(k); if (!p) return; R.pinned = true; $('rtp-follow').hidden = false; inspect('RTP packet #' + k + ' (in the jitter buffer)', pktDetail(p), true); });
+      el.appendChild(b);
+    });
+    const delay = R.depth * 20;
+    let info;
+    if (!R.playing) info = 'Buffering: waits for ' + R.depth + ' packet' + (R.depth > 1 ? 's' : '') + ' before playing (adds about ' + delay + ' ms of delay).';
+    else info = 'Next to play: #' + R.next + '. Buffer target: ' + R.depth + ' packet' + (R.depth > 1 ? 's' : '') + ' (about ' + delay + ' ms of delay).';
+    $('rtp-jbinfo').textContent = info;
+  }
+  function addSq(kind, title) {
+    const el = $('rtp-timeline');
+    const s = document.createElement('i'); s.className = 'sq ' + kind; s.title = title; el.appendChild(s);
+    while (el.children.length > 64) el.removeChild(el.firstChild);
+  }
+
+  function rtpSendTick() {
+    const g = R.gen;
+    if (!R.talking) { R.ts += 960; R.marker = true; rtpUI(); return; }
+    const p = { seq: R.seq, ts: R.ts, m: R.marker ? 1 : 0 };
+    R.seq += 1; R.ts += 960; R.marker = false;
+    inspect('RTP packet #' + p.seq + ' (just sent)', pktDetail(p));
+    const lost = R.loss && Math.random() < 0.18;
+    const dur = 1500 * (R.jitter ? 0.45 + Math.random() * 1.4 : 1);
+    flash($('rtp-sender'));
+    rtpFly('#' + p.seq + (p.m ? ' M' : ''), 'down', dur, 'top', lost ? 0.35 + Math.random() * 0.35 : null, true).then((ok) => {
+      if (g !== R.gen) return;
+      if (ok) rtpArrive(p);
+      else log(R.log, 'Network', 'Packet #' + p.seq + ' was lost. Nobody resends it: for live audio a resent packet would arrive too late to be useful.', 'bad');
+    });
+    rtpUI();
+  }
+
+  function rtpArrive(p) {
+    R.recv++;
+    if (R.first === null) R.first = p.seq;
+    const now = performance.now();
+    const scale = 20 / T(SEND_MS);
+    if (R.lastArr !== null) {
+      const D = (now - R.lastArr) * scale - (p.ts - R.lastTs) / 48;
+      R.jit += (Math.abs(D) - R.jit) / 16;
+    }
+    R.lastArr = now; R.lastTs = p.ts;
+    if (R.high === null || p.seq > R.high) R.high = p.seq;
+    else log(R.log, 'Receiver', '#' + p.seq + ' arrived out of order (after #' + R.high + '). The sequence number lets the buffer put it back in place.', 'muted');
+    if (R.next !== null && p.seq < R.next) {
+      R.late++;
+      log(R.log, 'Receiver', '#' + p.seq + ' arrived after its turn to play, so it was thrown away. To the listener this is the same as a lost packet.', 'bad');
+    } else {
+      R.buf.set(p.seq, p);
+    }
+    flash($('rtp-receiver'));
+    rtpUI(); renderBuf();
+  }
+
+  function rtpPlayTick() {
+    if (!R.playing) {
+      if (R.buf.size >= R.depth) { R.playing = true; if (R.next === null) R.next = Math.min.apply(null, Array.from(R.buf.keys())); }
+      else {
+        if (!R.running && R.buf.size === 0) { clearInterval(R.playTimer); R.playTimer = null; }
+        renderBuf(); return;
+      }
+    }
+    if (R.buf.has(R.next)) {
+      R.buf.delete(R.next); addSq('play', '#' + R.next + ' played'); R.next++;
+    } else if (R.buf.size === 0) {
+      R.playing = false;
+      if (R.running) addSq('quiet', 'Nothing to play');
+    } else if (R.buf.size >= R.depth) {
+      addSq('lost', '#' + R.next + ' concealed');
+      log(R.log, 'Receiver', '#' + R.next + ' was missing when its turn came. The decoder fills those 20 ms by guessing from the surrounding audio (packet loss concealment).', 'bad');
+      R.conceal++; R.next++;
+    }
+    renderBuf(); rtpUI();
+  }
+
+  async function rtpRR(manual) {
+    if (R.first === null) { if (manual) R.say('The receiver hasn\'t received anything yet, so there is nothing to report. Start the stream first.'); return; }
+    const g = R.gen;
+    const expected = R.high - R.first + 1;
+    const lostCum = Math.max(0, expected - R.recv);
+    const expInt = expected - R.rrExp, recvInt = R.recv - R.rrRecv;
+    R.rrExp = expected; R.rrRecv = R.recv;
+    const frac = expInt > 0 ? Math.max(0, (expInt - recvInt) / expInt) : 0;
+    const pct = Math.round(frac * 100);
+    const detail = 'RTCP Receiver Report (packet type 201)\n' +
+      'Sent by: SSRC 0x1B44D07E (the receiver)\nAbout:   SSRC ' + R.ssrc + ' (the sender\'s stream)\n\n' +
+      'fraction lost since last report: ' + pct + '% (' + Math.round(frac * 256) + '/256)\n' +
+      'cumulative packets lost: ' + lostCum + '\n' +
+      'highest sequence number received: ' + R.high + '\n' +
+      'interarrival jitter: ' + R.jit.toFixed(1) + ' ms\n\n' +
+      'RTCP is RTP\'s companion protocol for feedback and statistics. It is sent a few times per second at most, on its own port (or the same port in WebRTC). Senders also send Sender Reports (type 200) with clock information used for lip sync between audio and video.';
+    inspect('RTCP Receiver Report', detail);
+    log(R.log, 'Receiver to sender', 'RTCP report: ' + pct + '% lost recently, ' + lostCum + ' lost in total, jitter ' + R.jit.toFixed(1) + ' ms', 'up');
+    if (manual) R.say('The receiver sends an RTCP Receiver Report back to the sender: how much was lost, the highest sequence number seen, and how uneven the arrival times are.');
+    const ok = await rtpFly('RTCP report', 'upk', 1500, 'bot', null, false);
+    if (!ok || g !== R.gen) return;
+    flash($('rtp-sender'));
+    $('rtp-sfb').textContent = pct + '% loss, ' + R.jit.toFixed(0) + ' ms jitter';
+    log(R.log, 'Sender', pct > 5
+      ? 'Reads ' + pct + '% loss. A real encoder would now lower its bitrate or add forward error correction.'
+      : 'Reads the report: little or no loss, so it keeps its current quality.', 'muted');
+  }
+
+  function rtpTimers(fresh) {
+    clearInterval(R.sendTimer); clearInterval(R.rrTimer); clearInterval(R.playTimer);
+    R.sendTimer = R.rrTimer = R.playTimer = null;
+    if (R.running) {
+      R.sendTimer = setInterval(rtpSendTick, T(SEND_MS));
+      R.rrTimer = setInterval(() => rtpRR(false), T(9000));
+      if (fresh) rtpSendTick();
+    }
+    if (R.running || R.buf.size) R.playTimer = setInterval(rtpPlayTick, T(SEND_MS));
+  }
+  function rtpStart() {
+    R.running = true; R.marker = true;
+    rtpTimers(true);
+    R.say('The sender cuts audio into 20 ms chunks and sends each one as an RTP packet over UDP. Every packet carries a sequence number and a timestamp. UDP never resends anything, so the receiver has to cope with whatever arrives.');
+    rtpUI();
+  }
+  function rtpStop() {
+    R.running = false;
+    clearInterval(R.sendTimer); clearInterval(R.rrTimer); R.sendTimer = R.rrTimer = null;
+    R.say('Stopped. The receiver plays out whatever is still in its jitter buffer.');
+    rtpUI();
+  }
+  function rtpReset() {
+    R.gen++;
+    clearInterval(R.sendTimer); clearInterval(R.rrTimer); clearInterval(R.playTimer);
+    R.lane.querySelectorAll('.pkt').forEach((p) => p.remove());
+    Object.assign(R, { running: false, talking: true, loss: false, jitter: false, depth: 1, seq: 23110, ts: 1930472, marker: true, sendTimer: null, playTimer: null, rrTimer: null, buf: new Map(), next: null, playing: false, recv: 0, first: null, high: null, late: 0, conceal: 0, jit: 0, lastArr: null, lastTs: null, rrExp: 0, rrRecv: 0, pinned: false });
+    $('rtp-talk').checked = true; $('rtp-loss').checked = false; $('rtp-jitter').checked = false;
+    $('rtp-follow').hidden = true; $('rtp-sfb').textContent = 'none yet';
+    $('rtp-timeline').innerHTML = '';
+    $('rtp-insp-title').textContent = 'Shows the latest packet. Click a packet in the jitter buffer to inspect it.';
+    $('rtp-insp').textContent = 'No packets yet.';
+    resetLog(R.log, 'Events will appear here.');
+    R.say('Press Start to send audio as a stream of RTP packets. Then turn on packet loss and jitter, and watch how the receiver copes.');
+    renderBuf(); rtpUI();
+  }
+
+  $('rtp-start').addEventListener('click', rtpStart);
+  $('rtp-stop').addEventListener('click', rtpStop);
+  $('rtp-rr').addEventListener('click', () => rtpRR(true));
+  $('rtp-follow').addEventListener('click', () => { R.pinned = false; $('rtp-follow').hidden = true; $('rtp-insp-title').textContent = 'Shows the latest packet. Click a packet in the jitter buffer to inspect it.'; });
+  $('rtp-talk').addEventListener('change', (e) => {
+    R.talking = e.target.checked;
+    R.say(R.talking
+      ? 'Talking again. The next packet has the marker bit set (M=1). Its timestamp jumped forward by the length of the silence, while the sequence number simply continues from where it stopped.'
+      : 'Silence. Many codecs stop sending while nobody talks (discontinuous transmission). The sequence number pauses, but the timestamp keeps counting, so the receiver knows how much time passed. A pause in packets is not loss, because no sequence numbers are skipped.');
+    rtpUI();
+  });
+  $('rtp-loss').addEventListener('change', (e) => {
+    R.loss = e.target.checked;
+    R.say(R.loss
+      ? 'Some packets now vanish in the network. Nobody resends them. The receiver notices the gap in sequence numbers and hides it as well as it can.'
+      : 'Packet loss turned off.');
+  });
+  $('rtp-jitter').addEventListener('change', (e) => {
+    R.jitter = e.target.checked;
+    R.say(R.jitter
+      ? 'Packets now take uneven amounts of time, so some overtake others. With the small buffer, slow packets often miss their turn. Try the large buffer and compare.'
+      : 'Jitter turned off: every packet takes the same time again.');
+  });
+  $('rtp-depth').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
+    R.depth = +b.dataset.depth;
+    R.say(R.depth === 1
+      ? 'Small buffer: playback starts almost immediately (about 20 ms of delay), but a packet that is even slightly late misses its turn and is thrown away.'
+      : 'Large buffer: the receiver holds 4 packets (about 80 ms) before playing, so late and reordered packets usually still make it in time. The price is extra delay on every word, which is the core trade-off in real-time audio.');
+    renderBuf(); rtpUI();
+  }));
+  renderBuf(); rtpUI();
+
+  /* =====================================================
+     SIP
+     ===================================================== */
+  const SLd = new Ladder($('sip-ladder'), ['Alice\'s phone', 'SIP proxy (example.com)', 'Bob\'s phone'], { title: $('sip-insp-title'), body: $('sip-insp') });
+  const P = { gen: 0, busy: false, reg: false, call: 'idle', stream: null, n: 0, timer: null, log: $('sip-log'), say: (t) => { $('sip-say').textContent = t; } };
+  const AL = 0, PX = 1, BO = 2;
+
+  const SDP_OFFER = 'v=0\no=alice 2890844526 2890844526 IN IP4 198.51.100.7\ns=call\nc=IN IP4 198.51.100.7\nt=0 0\nm=audio 49170 RTP/AVP 111 0\na=rtpmap:111 opus/48000/2\na=rtpmap:0 PCMU/8000';
+  const SDP_ANSWER = 'v=0\no=bob 2808844564 2808844564 IN IP4 192.0.2.20\ns=call\nc=IN IP4 192.0.2.20\nt=0 0\nm=audio 3456 RTP/AVP 111\na=rtpmap:111 opus/48000/2';
+
+  function sipMsg(start, o) {
+    const n = P.n;
+    const L = [start];
+    if (o.bob) {
+      L.push('Via: SIP/2.0/UDP 192.0.2.20:5060;branch=z9hG4bK-b' + n);
+      L.push('From: "Bob" <sip:bob@example.com>;tag=b912' + n);
+      L.push('To: "Alice" <sip:alice@example.com>;tag=a73k' + n);
+    } else {
+      if (o.via2) L.push('Via: SIP/2.0/UDP proxy.example.com:5060;branch=z9hG4bK-p' + n);
+      L.push('Via: SIP/2.0/UDP 198.51.100.7:5060;branch=z9hG4bK-a' + n);
+      L.push('From: "Alice" <sip:alice@example.com>;tag=a73k' + n);
+      L.push('To: "Bob" <sip:bob@example.com>' + (o.toTag ? ';tag=b912' + n : ''));
+    }
+    L.push('Call-ID: 3c26' + n + 'f8e1@198.51.100.7');
+    L.push('CSeq: ' + (o.cseq || 1) + ' ' + o.method);
+    if (o.contact) L.push('Contact: ' + o.contact);
+    if (o.body) { L.push('Content-Type: application/sdp'); L.push('Content-Length: ' + o.body.length); L.push(''); L.push(o.body); }
+    else L.push('Content-Length: 0');
+    if (o.note) { L.push(''); L.push('(' + o.note + ')'); }
+    return L.join('\n');
+  }
+
+  function sipUI() {
+    const b = P.busy;
+    $('sip-reg').disabled = b || P.reg;
+    $('sip-call').disabled = b || P.call !== 'idle';
+    $('sip-cancel').disabled = b || P.call !== 'ringing';
+    $('sip-answer').disabled = b || P.call !== 'ringing';
+    $('sip-decline').disabled = b || P.call !== 'ringing';
+    $('sip-hangA').disabled = b || P.call !== 'incall';
+    $('sip-hangB').disabled = b || P.call !== 'incall';
+  }
+  async function sipRun(fn) {
+    if (P.busy) return;
+    P.busy = true; sipUI();
+    const g = P.gen;
+    try { await fn(g); } finally { if (g === P.gen) { P.busy = false; sipUI(); } }
+  }
+  const sm = async (g, o) => { await SLd.msg(o); return g === P.gen; };
+  function idleStatus() {
+    SLd.status(AL, 'Idle');
+    SLd.status(BO, P.reg ? 'Registered, idle' : 'Not registered');
+    SLd.status(PX, P.reg ? 'Knows where Bob is' : 'Doesn\'t know where Bob is');
+  }
+
+  async function sipRegister(g) {
+    P.say('Bob\'s phone tells the proxy "I am bob@example.com, and you can reach me at 192.0.2.20". This is how the proxy can later find Bob, even if his IP address changes.');
+    log(P.log, 'Bob\'s phone', 'Starts up and registers its current address with the proxy (registrar).', 'up');
+    const reg = 'REGISTER sip:example.com SIP/2.0\nVia: SIP/2.0/UDP 192.0.2.20:5060;branch=z9hG4bK-reg1\nFrom: <sip:bob@example.com>;tag=r4c1\nTo: <sip:bob@example.com>\nCall-ID: 8812reg@192.0.2.20\nCSeq: 1 REGISTER\nContact: <sip:bob@192.0.2.20:5060>\nExpires: 3600\nContent-Length: 0\n\n(Contact is the address where Bob can be reached right now.\nExpires: 3600 means the phone must re-register within an hour.)';
+    if (!await sm(g, { from: BO, to: PX, label: 'REGISTER', kind: 'req', title: 'REGISTER (Bob\'s phone to proxy)', detail: reg })) return;
+    log(P.log, 'Proxy', 'Saves in its location database:\nbob@example.com  ->  sip:bob@192.0.2.20:5060  (for 3600 s)', 'muted');
+    const ok = 'SIP/2.0 200 OK\nVia: SIP/2.0/UDP 192.0.2.20:5060;branch=z9hG4bK-reg1\nFrom: <sip:bob@example.com>;tag=r4c1\nTo: <sip:bob@example.com>;tag=px77\nCall-ID: 8812reg@192.0.2.20\nCSeq: 1 REGISTER\nContact: <sip:bob@192.0.2.20:5060>;expires=3600\nContent-Length: 0\n\n(Real registrars usually ask for a password first: they reply 401 Unauthorized, and the phone repeats the REGISTER with credentials. Skipped here.)';
+    if (!await sm(g, { from: PX, to: BO, label: '200 OK', kind: 'resp', title: '200 OK (registration accepted)', detail: ok })) return;
+    P.reg = true; idleStatus();
+    P.say('Registered. Notice the request and response pattern, like HTTP: a method (REGISTER) and a numbered response (200 OK). SIP borrowed a lot from HTTP. Now try calling Bob.');
+  }
+
+  async function sipCall(g) {
+    P.n++;
+    if (SLd.track.querySelector('.lrow')) SLd.note('New call');
+    P.call = 'calling';
+    SLd.status(AL, 'Calling Bob…');
+    P.say('Alice\'s phone sends an INVITE to the proxy. Its body is SDP: Alice\'s IP address, the port where she wants to receive audio, and the codecs she supports.');
+    log(P.log, 'Alice\'s phone', 'Alice dials bob@example.com. The phone opens port 49170 for incoming audio and sends INVITE to its proxy.', 'up');
+    if (!await sm(g, { from: AL, to: PX, label: 'INVITE (SDP offer)', kind: 'req', title: 'INVITE from Alice', detail: sipMsg('INVITE sip:bob@example.com SIP/2.0', { method: 'INVITE', contact: '<sip:alice@198.51.100.7:5060>', body: SDP_OFFER, note: 'SDP says: send Alice audio at 198.51.100.7, port 49170, as Opus or PCMU' }) })) return;
+    if (!await sm(g, { from: PX, to: AL, label: '100 Trying', kind: 'resp', title: '100 Trying', detail: sipMsg('SIP/2.0 100 Trying', { method: 'INVITE', note: '1xx responses are provisional. 100 Trying means "got it, working on it", so Alice\'s phone stops retransmitting the INVITE. Over UDP, SIP retransmits requests itself until it hears back.' }) })) return;
+    if (!P.reg) {
+      log(P.log, 'Proxy', 'Looks up bob@example.com in its location database: no registration found.', 'bad');
+      if (!await sm(g, { from: PX, to: AL, label: '480 Temporarily Unavailable', kind: 'err', title: '480 Temporarily Unavailable', detail: sipMsg('SIP/2.0 480 Temporarily Unavailable', { method: 'INVITE', toTag: true, note: 'The proxy knows the user bob, but no device is registered for him right now. A completely unknown user would get 404 Not Found.' }) })) return;
+      if (!await sm(g, { from: AL, to: PX, label: 'ACK', kind: 'req', title: 'ACK (for the error response)', detail: sipMsg('ACK sip:bob@example.com SIP/2.0', { method: 'ACK', toTag: true, note: 'Every final response to an INVITE gets an ACK. For error responses, the ACK goes to the proxy that sent the error.' }) })) return;
+      P.call = 'idle'; idleStatus(); SLd.status(AL, 'Call failed');
+      P.say('The call failed: the proxy has no idea where Bob\'s phone is. Register Bob\'s phone, then call again.');
+      return;
+    }
+    log(P.log, 'Proxy', 'Looks up bob@example.com: registered at sip:bob@192.0.2.20:5060.\nAdds its own Via header and forwards the INVITE there.', 'muted');
+    SLd.status(PX, 'Routing the call');
+    if (!await sm(g, { from: PX, to: BO, label: 'INVITE (SDP offer)', kind: 'req', title: 'INVITE forwarded to Bob', detail: sipMsg('INVITE sip:bob@192.0.2.20:5060 SIP/2.0', { method: 'INVITE', via2: true, contact: '<sip:alice@198.51.100.7:5060>', body: SDP_OFFER, note: 'The proxy rewrote the Request-URI to Bob\'s registered address and added its own Via on top. Responses retrace the Via headers back to Alice.' }) })) return;
+    log(P.log, 'Bob\'s phone', 'Rings and shows: incoming call from Alice.', 'down');
+    SLd.status(BO, 'Ringing!');
+    if (!await sm(g, { from: BO, to: PX, label: '180 Ringing', kind: 'resp', title: '180 Ringing (from Bob)', detail: sipMsg('SIP/2.0 180 Ringing', { method: 'INVITE', via2: true, toTag: true, contact: '<sip:bob@192.0.2.20:5060>' }) })) return;
+    if (!await sm(g, { from: PX, to: AL, label: '180 Ringing', kind: 'resp', title: '180 Ringing (forwarded to Alice)', detail: sipMsg('SIP/2.0 180 Ringing', { method: 'INVITE', toTag: true, contact: '<sip:bob@192.0.2.20:5060>', note: 'The proxy removed its own Via before forwarding. Alice\'s phone plays a ringback tone.' }) })) return;
+    log(P.log, 'Alice\'s phone', 'Plays a ringback tone.', 'down');
+    SLd.status(AL, 'Hearing ringback'); SLd.status(PX, 'Waiting');
+    P.call = 'ringing';
+    P.say('Bob\'s phone is ringing. Answer or decline on Bob\'s side, or cancel on Alice\'s side.');
+  }
+
+  async function sipAnswer(g) {
+    P.call = 'answering';
+    P.say('Bob answers. His 200 OK carries his own SDP: his address, his audio port, and the one codec he picked from Alice\'s list.');
+    log(P.log, 'Bob\'s phone', 'Bob picks up. The phone opens port 3456 for incoming audio and chooses Opus.', 'up');
+    if (!await sm(g, { from: BO, to: PX, label: '200 OK (SDP answer)', kind: 'resp', title: '200 OK from Bob', detail: sipMsg('SIP/2.0 200 OK', { method: 'INVITE', via2: true, toTag: true, contact: '<sip:bob@192.0.2.20:5060>', body: SDP_ANSWER, note: 'SDP says: send Bob audio at 192.0.2.20, port 3456, as Opus' }) })) return;
+    if (!await sm(g, { from: PX, to: AL, label: '200 OK (SDP answer)', kind: 'resp', title: '200 OK forwarded to Alice', detail: sipMsg('SIP/2.0 200 OK', { method: 'INVITE', toTag: true, contact: '<sip:bob@192.0.2.20:5060>', body: SDP_ANSWER }) })) return;
+    if (!await sm(g, { from: AL, to: BO, label: 'ACK (direct)', kind: 'req', title: 'ACK, sent straight to Bob', detail: sipMsg('ACK sip:bob@192.0.2.20:5060 SIP/2.0', { method: 'ACK', toTag: true, note: 'The ACK for a 200 OK goes to Bob\'s Contact address directly. The proxy didn\'t add a Record-Route header, so it drops out of the conversation. INVITE, 200 OK, ACK is SIP\'s three-way handshake.' }) })) return;
+    P.call = 'incall';
+    P.stream = SLd.stream({
+      path: [AL, BO], label: 'RTP audio, phone to phone, not through the proxy',
+      title: 'RTP media stream',
+      detail: 'Alice sends to 192.0.2.20:3456   (from Bob\'s SDP)\nBob sends to 198.51.100.7:49170   (from Alice\'s SDP)\nCodec: Opus, payload type 111\n\nSIP only set the call up. The audio itself is RTP over UDP, going straight between the two addresses from the SDP. See the RTP tab for what these packets contain.',
+    });
+    SLd.status(AL, 'In call'); SLd.status(BO, 'In call'); SLd.status(PX, 'Not involved');
+    log(P.log, 'Both phones', 'Start sending RTP audio to the address and port from the other side\'s SDP.', 'down');
+    P.say('Audio now flows as RTP directly between the IP addresses and ports from the two SDP bodies. The proxy is not in the media path at all. Hang up from either side to end the call.');
+  }
+
+  async function sipDecline(g) {
+    P.call = 'ending';
+    P.say('Bob declines. His phone sends a final error response, and each hop acknowledges it.');
+    log(P.log, 'Bob\'s phone', 'Bob presses decline.', 'up');
+    if (!await sm(g, { from: BO, to: PX, label: '486 Busy Here', kind: 'err', title: '486 Busy Here', detail: sipMsg('SIP/2.0 486 Busy Here', { method: 'INVITE', via2: true, toTag: true, note: 'Phones commonly send 486 Busy Here or 603 Decline when the user rejects a call.' }) })) return;
+    if (!await sm(g, { from: PX, to: BO, label: 'ACK', kind: 'req', title: 'ACK from proxy', detail: sipMsg('ACK sip:bob@192.0.2.20:5060 SIP/2.0', { method: 'ACK', via2: true, toTag: true, note: 'Error responses are acknowledged hop by hop: the proxy ACKs Bob, then forwards the error to Alice.' }) })) return;
+    if (!await sm(g, { from: PX, to: AL, label: '486 Busy Here', kind: 'err', title: '486 Busy Here forwarded to Alice', detail: sipMsg('SIP/2.0 486 Busy Here', { method: 'INVITE', toTag: true }) })) return;
+    if (!await sm(g, { from: AL, to: PX, label: 'ACK', kind: 'req', title: 'ACK from Alice', detail: sipMsg('ACK sip:bob@example.com SIP/2.0', { method: 'ACK', toTag: true }) })) return;
+    P.call = 'idle'; idleStatus(); SLd.status(AL, 'Busy tone');
+    P.say('The call was rejected and no media ever flowed. You can call again.');
+  }
+
+  async function sipCancel(g) {
+    P.call = 'ending';
+    P.say('Alice gives up while it\'s still ringing. CANCEL stops a pending INVITE. Watch how many messages it takes: each hop confirms the CANCEL, and the original INVITE still needs its own final response.');
+    log(P.log, 'Alice\'s phone', 'Alice hangs up before Bob answers.', 'up');
+    if (!await sm(g, { from: AL, to: PX, label: 'CANCEL', kind: 'req', title: 'CANCEL from Alice', detail: sipMsg('CANCEL sip:bob@example.com SIP/2.0', { method: 'CANCEL', note: 'Same Call-ID, CSeq number and branch as the INVITE it cancels.' }) })) return;
+    if (!await sm(g, { from: PX, to: AL, label: '200 OK (CANCEL)', kind: 'resp', title: '200 OK for the CANCEL', detail: sipMsg('SIP/2.0 200 OK', { method: 'CANCEL', toTag: true, note: 'This only confirms the CANCEL was received. The INVITE still gets its own final response below.' }) })) return;
+    if (!await sm(g, { from: PX, to: BO, label: 'CANCEL', kind: 'req', title: 'CANCEL forwarded to Bob', detail: sipMsg('CANCEL sip:bob@192.0.2.20:5060 SIP/2.0', { method: 'CANCEL', via2: true }) })) return;
+    log(P.log, 'Bob\'s phone', 'Stops ringing. Shows a missed call from Alice.', 'down');
+    SLd.status(BO, 'Missed call');
+    if (!await sm(g, { from: BO, to: PX, label: '200 OK (CANCEL)', kind: 'resp', title: '200 OK for the CANCEL (Bob)', detail: sipMsg('SIP/2.0 200 OK', { method: 'CANCEL', via2: true, toTag: true }) })) return;
+    if (!await sm(g, { from: BO, to: PX, label: '487 Request Terminated', kind: 'err', title: '487 Request Terminated', detail: sipMsg('SIP/2.0 487 Request Terminated', { method: 'INVITE', via2: true, toTag: true, note: 'The final response to the original INVITE: it was terminated by the CANCEL.' }) })) return;
+    if (!await sm(g, { from: PX, to: BO, label: 'ACK', kind: 'req', title: 'ACK from proxy', detail: sipMsg('ACK sip:bob@192.0.2.20:5060 SIP/2.0', { method: 'ACK', via2: true, toTag: true }) })) return;
+    if (!await sm(g, { from: PX, to: AL, label: '487 Request Terminated', kind: 'err', title: '487 forwarded to Alice', detail: sipMsg('SIP/2.0 487 Request Terminated', { method: 'INVITE', toTag: true }) })) return;
+    if (!await sm(g, { from: AL, to: PX, label: 'ACK', kind: 'req', title: 'ACK from Alice', detail: sipMsg('ACK sip:bob@example.com SIP/2.0', { method: 'ACK', toTag: true }) })) return;
+    P.call = 'idle'; idleStatus(); SLd.status(BO, 'Missed call');
+    P.say('Call cancelled before it was answered. No media ever flowed.');
+  }
+
+  async function sipHangup(g, who) {
+    P.call = 'ending';
+    const from = who === 'A' ? AL : BO, to = who === 'A' ? BO : AL;
+    const name = who === 'A' ? 'Alice' : 'Bob';
+    if (P.stream) P.stream.stop('Media stopped');
+    P.say(name + ' hangs up. BYE ends the call. Like the ACK, it goes directly to the other phone, because the proxy chose not to stay in the path.');
+    log(P.log, name + '\'s phone', 'Hangs up, stops sending RTP and closes its audio port.', 'up');
+    const bye = who === 'A'
+      ? sipMsg('BYE sip:bob@192.0.2.20:5060 SIP/2.0', { method: 'BYE', cseq: 2, toTag: true, note: 'CSeq went up to 2: it counts requests within this call (dialog).' })
+      : sipMsg('BYE sip:alice@198.51.100.7:5060 SIP/2.0', { method: 'BYE', cseq: 1, bob: true, note: 'Bob\'s first request in this call, so CSeq starts at 1 for his side. Each side counts its own requests.' });
+    if (!await sm(g, { from, to, label: 'BYE (direct)', kind: 'req', title: 'BYE from ' + name, detail: bye })) return;
+    const ok = who === 'A'
+      ? sipMsg('SIP/2.0 200 OK', { method: 'BYE', cseq: 2, toTag: true })
+      : sipMsg('SIP/2.0 200 OK', { method: 'BYE', cseq: 1, bob: true });
+    if (!await sm(g, { from: to, to: from, label: '200 OK', kind: 'resp', title: '200 OK for the BYE', detail: ok })) return;
+    P.call = 'idle'; idleStatus();
+    SLd.status(AL, 'Call ended'); SLd.status(BO, 'Call ended');
+    P.say('Call ended. Notice that the proxy saw none of the end of the call. You can call again, or reset.');
+  }
+
+  function sipReset() {
+    P.gen++;
+    SLd.clear();
+    Object.assign(P, { busy: false, reg: false, call: 'idle', stream: null, n: 0 });
+    idleStatus();
+    resetLog(P.log, 'Activity will appear here.');
+    P.say('Alice wants to call Bob. Both phones use the same SIP proxy at example.com. Start by registering Bob\'s phone, or try calling first to see what happens when the proxy doesn\'t know where Bob is.');
+    sipUI();
+  }
+
+  $('sip-reg').addEventListener('click', () => sipRun(sipRegister));
+  $('sip-call').addEventListener('click', () => sipRun(sipCall));
+  $('sip-answer').addEventListener('click', () => sipRun(sipAnswer));
+  $('sip-decline').addEventListener('click', () => sipRun(sipDecline));
+  $('sip-cancel').addEventListener('click', () => sipRun(sipCancel));
+  $('sip-hangA').addEventListener('click', () => sipRun((g) => sipHangup(g, 'A')));
+  $('sip-hangB').addEventListener('click', () => sipRun((g) => sipHangup(g, 'B')));
+  idleStatus(); sipUI();
+
+  /* ---------- Toolbar ---------- */
+  document.querySelectorAll('button[data-speed]').forEach((b) => b.addEventListener('click', () => {
+    window.SIM.speed = parseFloat(b.dataset.speed);
+    document.querySelectorAll('button[data-speed]').forEach((x) => x.setAttribute('aria-pressed', x === b));
+    if (R.running || R.playTimer) rtpTimers(false);
+  }));
+  $('reset-btn').addEventListener('click', () => {
+    if (!$('panel-rtc').hidden) rtcReset();
+    else if (!$('panel-rtp').hidden) rtpReset();
+    else if (!$('panel-sip').hidden) sipReset();
+  });
+})();
+</script>
+    <script src="https://kit.fontawesome.com/5e9402fe3f.js" crossorigin="anonymous"></script>
+</body>
+</html>
