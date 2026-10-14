@@ -4,8 +4,8 @@
         <meta charset="UTF-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="color-scheme" content="light dark">
         <link rel="stylesheet" href="./style.css" type="text/css">
-        <script src="./theme-switcher.js"></script>
         <title>Anmol Deep | AI/ML Engineer</title>
     </head>
     <!-- Google tag (gtag.js) -->
@@ -18,61 +18,36 @@
       gtag('config', 'G-ZJ7X6BCWP4');
     </script>
     <body>
-        <nav>
-            <ul>
-                <li><h1><a href="./index.html"><span class="name-icon fas fa-chart-line"></span> Anmol</a></h1></li>
-                <li><a href="./projects.html">Projects</a></li>
-                <li><a href="./about.html">About</a></li>
-                <li><a href="./blog/index.html">Blog</a></li>
-                <li><a href="./index.html#contact">Contact</a></li>
-                <li>
-                    <a href="https://linkedin.com/in/anmoldeep1" target="_blank">
-                        <span class="fab fa-linkedin" aria-hidden="true"></span>
-                        <span class="sr-only">LinkedIn</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="https://github.com/adsk2050" target="_blank">
-                        <span class="fab fa-github" aria-hidden="true"></span>
-                        <span class="sr-only">GitHub</span>
-                    </a>
-                </li>
-                <li><a href="./resume.html" class="resume-button">Resume</a></li>
-            </ul>
-        </nav>
+        <header class="site-header">
+            <a class="site-name" href="./index.html">Anmol Deep</a>
+            <nav aria-label="Main">
+                <a href="./projects.html">Projects</a>
+                <a href="./blog/index.html">Blog</a>
+                <a href="./about.html">About</a>
+                <a href="./resume.html">Resume</a>
+            </nav>
+        </header>
         <section id="intro">
-            <p class="name">Hi, my name is <span class="name-span">Anmol Deep</span></p>
-            <h2>AI/ML Engineer</h2>
+            <h1>Anmol Deep</h1>
+            <p class="role">AI/ML Engineer</p>
             <p>I have 5+ years of experience building and shipping ML/NLP systems. IIT Guwahati alumnus. Currently deep-diving into LLM inference optimization &mdash; SFT, RLHF, quantization, continuous batching, KV caching, and serving with vLLM and SGLang.</p>
             <p>I'm interested in working on problems where scale makes AI meaningful &mdash; where models drive real business outcomes, not just demos.</p>
-            <p>Most recently at <a href="#">Aidora Inc</a>, I built voice AI with LiveKit, multi-agent systems using MCP, and production RAG pipelines (query rewriting, HyDE, MMR reranking) with Langgraph and Milvus.</p>
-            <p>Before that: Legal Knowledge Graphs and Graph RAG at <a href="#">Staram Analytics</a>, NER and document AI at <a href="https://insurancesamadhan.com">Insurance Samadhan</a>, and recommender systems at <a href="https://www.tata.com/tatadigital">Tata Digital</a> (promoted within one year).</p>
-        </section>
-        <div class="gradient-line"></div>
-        <div class="contact-div">
-            <section id="contact">
-                <h2>Contact me</h2>
-                <p>I am interested in AI/ML problems where scale matters and AI can drive real business impact. Let's talk.</p>
-                <div class="contact-links">
-                    <a href="mailto:adsk2050@gmail.com">
-                        <span class="fas fa-envelope"></span>
-                        <span class="sr-only">Email me</span>
-                    </a>
-                    <a href="https://linkedin.com/in/anmoldeep1" target="_blank">
-                        <span class="fab fa-linkedin"></span>
-                        <span class="sr-only">LinkedIn</span>
-                    </a>
-                </div>
-            </section>
-        </div>
-        <div class="gradient-line"></div>
-        <footer>
-            <h2>Anmol Deep &middot; AI/ML Engineer</h2>
-            <ul>
-                <li><a href="https://stackoverflow.com/users/7418045/anmol-deep">Stack overflow</a></li>
+            <p>Most recently at Aidora Inc, I built voice AI with LiveKit, multi-agent systems using MCP, and production RAG pipelines (query rewriting, HyDE, MMR reranking) with Langgraph and Milvus.</p>
+            <p>Before that: Legal Knowledge Graphs and Graph RAG at Staram Analytics, NER and document AI at <a href="https://insurancesamadhan.com">Insurance Samadhan</a>, and recommender systems at <a href="https://www.tata.com/tatadigital">Tata Digital</a> (promoted within one year).</p>
+
+            <h2 class="section-title">Writing</h2>
+            <ul class="home-posts">
+                <li><a href="./blog/speech-you-can-hear.html">Speech you can hear: how text-to-speech works</a> <time datetime="2026-10-14">Oct 2026</time></li>
+                <li><a href="./blog/real-time-web-protocols.html">Watch the wire: real-time web protocols</a> <time datetime="2026-10-05">Oct 2026</time></li>
             </ul>
-            <p><small>&copy; 2026 Anmol Deep. All rights reserved.</small></p>
+        </section>
+        <section id="contact">
+            <h2 class="section-title">Contact</h2>
+            <p>I am interested in AI/ML problems where scale matters and AI can drive real business impact. Write to me at <a href="mailto:adsk2050@gmail.com">adsk2050@gmail.com</a> or find me on <a href="https://linkedin.com/in/anmoldeep1">LinkedIn</a>.</p>
+        </section>
+        <footer class="site-footer">
+            <p><a href="mailto:adsk2050@gmail.com">adsk2050@gmail.com</a> &middot; <a href="https://github.com/adsk2050">GitHub</a> &middot; <a href="https://linkedin.com/in/anmoldeep1">LinkedIn</a> &middot; <a href="https://stackoverflow.com/users/7418045/anmol-deep">Stack Overflow</a></p>
+            <p>&copy; 2026 Anmol Deep</p>
         </footer>
-        <script src="https://kit.fontawesome.com/5e9402fe3f.js" crossorigin="anonymous"></script>
     </body>
 </html>
