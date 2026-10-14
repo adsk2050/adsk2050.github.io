@@ -56,7 +56,7 @@ STOLE = "I didn't say she stole it."
 
 CLIPS: list[C] = [
     # ---- Text normalisation ----
-    narr("numbers", "intro2", "Text normalisation. Before I speak, I rewrite symbols as words. Digits are the hardest: "
+    narr("numbers", "intro2", "Text normalisation. Before I speak, I rewrite symbols as words. Numbers are the hardest: "
          "the same four digits can be a phone number, a year, a price or a time. Only the words around them tell me which. Listen."),
     narr("numbers", "outro2", "Same digits, four readings. Context decides, and a reader trained on other rules gets it wrong."),
     bulbul("numbers", "in-loan", "Your loan of ₹5,00,000 is due on 12/10/2026.", "simran_en_customer", "en-IN"),
@@ -68,8 +68,8 @@ CLIPS: list[C] = [
 
     # ---- Spelling to sound ----
     narr("script", "intro2", "Spelling to sound. I turn letters into sounds. Devanagari spells Hindi almost one to one. "
-         "Latin letters bring English habits with them: main can become mane, and do can become doo. "
-         "Same sentence, different scripts and readers."),
+         "Latin letters bring English habits with them, so a Hindi word can be read like an English word. "
+         "Same sentence, two scripts."),
     narr("script", "outro2", "The script carries the sound. Write Hindi in Devanagari and nobody has to guess."),
     C("script", "k-deva", "kokoro", DEVA, "hf_alpha", "h"),
     C("script", "k-roman", "kokoro", ROMAN, "hf_alpha", "h"),
@@ -91,12 +91,12 @@ CLIPS: list[C] = [
          "जो reader सिर्फ़ एक language जानता है, वो आधा sentence गलत बोलेगा। सुनिए।", NARR_ENHI),
 
     # ---- Heteronyms (new) ----
-    narr("heteronyms", "intro", "Same spelling, two sounds. Read can be reed or red. Record can be record or record. "
-         "Letters alone cannot decide; I have to work out the grammar of the whole sentence. Each clip says one spelling two ways."),
+    narr("heteronyms", "intro", "Same spelling, two sounds. The word read can sound like reed, or like red. Record can be a noun or a verb. "
+         "Spelling alone cannot decide; I have to work out the grammar of the whole sentence. Each clip says one spelling two ways."),
     narr("heteronyms", "outro", "Hindi in Devanagari almost never has this problem. English has hundreds of these words."),
-    bulbul("heteronyms", "read", "I read it yesterday, and I will read it again tomorrow.", "simran_en_conversation", "en-IN"),
-    bulbul("heteronyms", "record", "Please record the record before the shop closes.", "simran_en_conversation", "en-IN"),
-    bulbul("heteronyms", "wind", "The wind was so strong that I had to wind the window shut.", "simran_en_conversation", "en-IN"),
+    bulbul("heteronyms", "read", "I read it yesterday, and I will read it again tomorrow.", "simran_en_conversation", "en-IN", 0.85),
+    bulbul("heteronyms", "record", "Please record the record before the shop closes.", "simran_en_conversation", "en-IN", 0.85),
+    bulbul("heteronyms", "wind", "The wind was so strong that I had to wind the window shut.", "simran_en_conversation", "en-IN", 0.85),
 
     # ---- Schwa deletion (new, Kokoro only) ----
     C("schwa", "dropped", "kokoro", "कमला ने नमकीन खरीदा।", "hf_alpha", "h", phonemes="kˈʌmlaː neː nəmkˈiːn kʰəɾˈiːdaː"),
@@ -109,7 +109,7 @@ CLIPS: list[C] = [
     C("names", "k-as-written", "kokoro", "Your flight from Thiruvananthapuram to Visakhapatnam is on time.", "af_heart", "a"),
 
     # ---- Pauses and melody ----
-    narr("punctuation", "intro2", "Pauses and melody. I have no pause tags. Punctuation is how you steer my pauses and my pitch. "
+    narr("punctuation", "intro2", "Pauses and melody. I do not have pause tags. Punctuation is how you steer my pauses and my pitch. "
          "Move one comma and the meaning flips. Change a full stop to a question mark and the end of the sentence should rise."),
     bulbul("punctuation", "ruko-a", "रुको, मत जाओ।", "simran_hi_conversation", "hi-IN"),
     bulbul("punctuation", "ruko-b", "रुको मत, जाओ।", "simran_hi_conversation", "hi-IN"),
@@ -125,7 +125,7 @@ CLIPS: list[C] = [
                      "No stress on any other word.") for w in ("she", "say", "stole")],
 
     # ---- Duration ----
-    narr("pace", "intro2", "Duration. Inside the model, every sound gets a predicted length. The pace setting scales those lengths, "
+    narr("pace", "intro2", "Speaking rate. Inside the model, every sound gets a predicted length. The speed setting scales those lengths, "
          "from half speed to double. Because the model re-plans the speech, fast speech stays clear. "
          "Compare it with a recording simply played twice as fast."),
     narr("pace", "outro2", "A sped-up recording squeezes everything equally. A model speaking fast chooses what to shorten."),
@@ -141,13 +141,13 @@ CLIPS: list[C] = [
     *[C("styles", f"oa-{n}", "openai", MATCH_EN, "coral", model="gpt-4o-mini-tts", instructions=i) for n, i in [
         ("whisper", "Whisper, very softly, as if in a library."),
         ("commentator", "Shout like an ecstatic cricket commentator after a last-ball six. Very loud, very fast, high pitch."),
-        ("bored", "Completely bored and flat. Monotone, slow, a small sigh before speaking."),
+        ("bored", "Completely bored and flat. Monotone, slow, a small sigh before speaking. Say every word clearly, including the last sentence."),
         ("upset", 'On the verge of tears. Voice shaking, slow, breaking on "late".'),
         ("angry", "Angry and clipped, every word bitten off."),
     ]],
 
     # ---- Limits ----
-    narr("limits", "intro2", "Limits. Laughs, sighs and whispers are not words. A model needs a separate way to make them: "
+    narr("limits", "intro2", "Now, my limits. Laughs, sighs and whispers are not words. A model needs a separate way to make them: "
          "a tag or an instruction. I am Bulbul V4 Flash, and I have neither. Listen to what happens when you type them."),
     narr("limits", "outro2", "Expression comes from choosing a voice, not from the text. Emotion in speech is still an open problem."),
     bulbul("limits", "whisper-tag", "(whispers) Come closer, I have a secret.", "simran_en_conversation", "en-IN"),
