@@ -51,18 +51,25 @@
   .clip .txt { font-size: 0.95rem; color: var(--muted); }
   .clip .meta { font-family: var(--mono); font-size: 0.78rem; color: var(--muted); }
   .clip .bar { position: absolute; left: 0; bottom: 0; height: 4px; width: calc(var(--p, 0) * 100%); background: var(--accent); }
-  .narr { display: flex; flex-wrap: wrap; gap: 10px; margin: 4px 0 12px; }
-  .narr .clip { flex: 0 1 auto; border-style: dashed; padding: 8px 12px 10px; }
-  .narr .clip .tag { font-weight: 600; }
+  .narr { display: none; }
+  .playall { display: inline-block; margin: 6px 0 4px; padding: 8px 16px; font-weight: 700 !important; background: var(--accent); color: var(--black) !important; border: 2px solid var(--accent); border-radius: 999px; }
+  .playall.playing { background: transparent; color: var(--accent) !important; }
+  .clips.pair { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
   .stat { font-family: var(--mono); font-size: 0.85rem; border-collapse: collapse; margin: 6px 0 12px; }
   .stat th, .stat td { border-bottom: 1px solid var(--line); padding: 4px 12px 4px 0; text-align: left; }
   .stat td:not(:first-child), .stat th:not(:first-child) { text-align: right; }
+  .stat td:last-child, .stat th:last-child { text-align: left; padding-left: 12px; font-family: var(--sans); }
+  .stat tr.sweet td { color: var(--accent); font-weight: 700; }
+  .stat tr.fastest td { color: var(--magenta); font-weight: 700; }
+  .badge { display: inline-block; font: 700 0.7rem var(--sans); text-transform: uppercase; letter-spacing: 0.04em; padding: 1px 6px; border-radius: 4px; border: 1px solid currentColor; margin-left: 4px; }
+  .stat-wrap { overflow-x: auto; }
+  .stat td:not(:first-child):not(:last-child), .stat th { white-space: nowrap; }
 
   @media (max-width: 600px) {
     .slide { padding: 16px 14px 14px; }
     .slide h2 { font-size: 1.4rem; }
-    .clips { grid-template-columns: 1fr; }
+    .clips, .clips.pair { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -112,13 +119,14 @@
     <span class="count" id="count" aria-live="polite"></span>
     <button class="navbtn" id="next" aria-label="Next slide">Next &rarr;</button>
     <select class="jump" id="jump" aria-label="Go to slide"></select>
-    <p class="keys">Arrow keys move between slides. Audio loads only when you press play.</p>
+    <p class="keys">Arrow keys move between slides. A slide&rsquo;s audio loads only when it plays.</p>
   </div>
 
   <section class="slide" id="start" data-part="Start" data-title="How this works">
     <p class="kicker">Start here</p>
     <h2>How this works</h2>
-    <p>Most clips come from <strong>Bulbul V4 Flash</strong>, Sarvam&rsquo;s text-to-speech model for Indian languages. On many slides Bulbul also explains the idea out loud, in its own voice. Press <em>Bulbul explains</em> for that.</p>
+    <p>Most clips come from <strong>Bulbul V4 Flash</strong>, Sarvam&rsquo;s text-to-speech model for Indian languages. On many slides Bulbul also explains the idea out loud, in its own voice.</p>
+    <p>Each slide plays by itself the first time you open it: Bulbul&rsquo;s explanation, then the clips in order. Press <em>Play this slide</em> to hear it again, or any clip on its own.</p>
     <p>Where Bulbul gets everything right, there would be nothing to hear, so some slides use another model that gets it wrong: Kokoro, a small open model I run on my laptop, or OpenAI&rsquo;s TTS. Each slide says which.</p>
     <p>Clips are labelled A, B, C. Within a group, only one thing changes: the script, the reader, the punctuation, the pace, or the style.</p>
     <p>Headphones help, especially on the phone-line slide.</p>
@@ -129,10 +137,7 @@
     <h2>Numbers, dates and acronyms</h2>
     <p>Before a model can speak, it rewrites symbols as words. This is called text normalisation, and the rules are local. An Indian reader says <code>₹5,00,000</code> as &ldquo;five lakh rupees&rdquo;. A reader built on American rules has never seen commas in those places.</p>
     <p>The same digits also change with context. <code>1800</code> is a phone number, a year, a price or a time, depending on the words around it.</p>
-    <div class="narr">
-      <button class="clip" data-src="audio/speech/numbers/intro2.m4a"><span class="tag">Bulbul explains</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/numbers/outro2.m4a"><span class="tag">Bulbul&rsquo;s takeaway</span><span class="bar"></span></button>
-    </div>
+    <div class="narr" data-intro="audio/speech/numbers/intro2.m4a" data-outro="audio/speech/numbers/outro2.m4a"></div>
     <p class="listen">Same text, two readers</p>
     <div class="clips">
       <button class="clip" data-src="audio/speech/numbers/in-loan.m4a"><span class="tag">A &middot; Indian reader (Bulbul)</span><span class="txt">Your loan of ₹5,00,000 is due on 12/10/2026.</span><span class="bar"></span></button>
@@ -152,10 +157,7 @@
     <h2>Devanagari vs romanised Hindi</h2>
     <p>A model turns letters (graphemes) into sounds (phonemes). Devanagari spells Hindi almost one to one. Latin letters bring English habits with them: <em>main</em> becomes &ldquo;mane&rdquo;, <em>do</em> becomes &ldquo;doo&rdquo;, <em>ruko</em> becomes &ldquo;roo-koh&rdquo;.</p>
     <p>Same voice, same model, same sentence. Only the script changes. Under each clip are the sounds the model decided to say.</p>
-    <div class="narr">
-      <button class="clip" data-src="audio/speech/script/intro2.m4a"><span class="tag">Bulbul explains</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/script/outro2.m4a"><span class="tag">Bulbul&rsquo;s takeaway</span><span class="bar"></span></button>
-    </div>
+    <div class="narr" data-intro="audio/speech/script/intro2.m4a" data-outro="audio/speech/script/outro2.m4a"></div>
     <p class="listen">Listen</p>
     <div class="clips">
       <button class="clip" data-src="audio/speech/script/k-deva.m4a"><span class="tag">A &middot; Devanagari</span><span class="txt" lang="hi">मैं दो मिनट में आता हूँ, बस रुको।</span><span class="meta">mɛ̃ doː mɪnəʈ mẽː aːtaː hũ, bʌs ɾʊkoː</span><span class="bar"></span></button>
@@ -169,10 +171,7 @@
     <h2>Hinglish needs a reader who knows both</h2>
     <p>Indians mix Hindi and English inside one sentence. For every word, the reader has to decide: Hindi rules or English rules? A reader that knows only one language gets the other half wrong.</p>
     <p>The same romanised Hinglish line, read by an English-only voice and by a Hinglish voice. Listen to <em>kal</em>, <em>ho gayi</em> and <em>karte hain</em>.</p>
-    <div class="narr">
-      <button class="clip" data-src="audio/speech/codemix/intro2.m4a"><span class="tag">Bulbul explains (Hinglish)</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/codemix/outro.m4a"><span class="tag">Bulbul&rsquo;s takeaway</span><span class="bar"></span></button>
-    </div>
+    <div class="narr" data-intro="audio/speech/codemix/intro2.m4a" data-outro="audio/speech/codemix/outro.m4a"></div>
     <p class="listen">Listen</p>
     <div class="clips">
       <button class="clip" data-src="audio/speech/codemix/k-english.m4a"><span class="tag">A &middot; English-only reader (Kokoro)</span><span class="txt">Kal ki meeting cancel ho gayi, toh weekend pe movie plan karte hain.</span><span class="bar"></span></button>
@@ -185,10 +184,7 @@
     <h2>Same spelling, two sounds</h2>
     <p>Some English words are spelt the same but said two ways: <em>read</em> (reed / red), <em>record</em> (REK-ord / ri-KORD), <em>wind</em>. The letters cannot decide. The model has to work out the grammar of the whole sentence.</p>
     <p>Each clip says one spelling two ways, a few words apart.</p>
-    <div class="narr">
-      <button class="clip" data-src="audio/speech/heteronyms/intro.m4a"><span class="tag">Bulbul explains</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/heteronyms/outro.m4a"><span class="tag">Bulbul&rsquo;s takeaway</span><span class="bar"></span></button>
-    </div>
+    <div class="narr" data-intro="audio/speech/heteronyms/intro.m4a" data-outro="audio/speech/heteronyms/outro.m4a"></div>
     <p class="listen">Listen</p>
     <div class="clips">
       <button class="clip" data-src="audio/speech/heteronyms/read.m4a"><span class="tag">A &middot; read</span><span class="txt">I read it yesterday, and I will read it again tomorrow.</span><span class="bar"></span></button>
@@ -226,10 +222,7 @@
     <p class="kicker">Prosody &middot; Pauses and melody</p>
     <h2>Move a comma, change the meaning</h2>
     <p>Prosody is the melody of speech: pitch, pauses and timing. Bulbul has no pause tags, so punctuation is the control. Move one comma and the meaning flips. Change a full stop to a question mark and the end of the sentence should rise.</p>
-    <div class="narr">
-      <button class="clip" data-src="audio/speech/punctuation/intro2.m4a"><span class="tag">Bulbul explains</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/punctuation/outro.m4a"><span class="tag">Bulbul&rsquo;s takeaway</span><span class="bar"></span></button>
-    </div>
+    <div class="narr" data-intro="audio/speech/punctuation/intro2.m4a" data-outro="audio/speech/punctuation/outro.m4a"></div>
     <p class="listen">Where the comma goes</p>
     <div class="clips">
       <button class="clip" data-src="audio/speech/punctuation/ruko-a.m4a"><span class="tag">A &middot; &ldquo;Stop, don&rsquo;t go&rdquo;</span><span class="txt" lang="hi">रुको, मत जाओ।</span><span class="bar"></span></button>
@@ -259,10 +252,7 @@
     <p class="kicker">Prosody &middot; Duration</p>
     <h2>Speaking rate</h2>
     <p>Models like FastSpeech predict how long each sound lasts. A pace setting scales those predictions, here from half speed to double. Because the model re-plans the speech, fast speech stays clear. Compare it with D, the normal clip simply played twice as fast.</p>
-    <div class="narr">
-      <button class="clip" data-src="audio/speech/pace/intro2.m4a"><span class="tag">Bulbul explains</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/pace/outro2.m4a"><span class="tag">Bulbul&rsquo;s takeaway</span><span class="bar"></span></button>
-    </div>
+    <div class="narr" data-intro="audio/speech/pace/intro2.m4a" data-outro="audio/speech/pace/outro2.m4a"></div>
     <p class="listen">Listen</p>
     <div class="clips">
       <button class="clip" data-src="audio/speech/pace/p05.m4a"><span class="tag">A &middot; Pace 0.5</span><span class="txt" lang="hi">अगला स्टेशन नई दिल्ली है। कृपया अपना सामान साथ रखें।</span><span class="bar"></span></button>
@@ -274,24 +264,28 @@
 
   <section class="slide" id="styles" data-part="The voice" data-title="One voice, many styles">
     <p class="kicker">The voice &middot; Speaker and style</p>
-    <h2>One voice, many styles</h2>
-    <p>A voice has two parts: who is speaking, and how. Some models take the &ldquo;how&rdquo; as a free-text instruction. Others ship one speaker recorded in several styles.</p>
-    <div class="narr">
-      <button class="clip" data-src="audio/speech/styles/intro2.m4a"><span class="tag">Bulbul explains</span><span class="bar"></span></button>
+    <h2>One line, four styles, two ways</h2>
+    <p>A voice has two parts: who is speaking, and how. Bulbul ships one speaker recorded in several styles; you pick the style by picking the voice. OpenAI takes the style as a free-text instruction. Each row below is the same line and the same style, made both ways.</p>
+    <div class="narr" data-intro="audio/speech/styles/intro2.m4a"></div>
+    <p class="listen">Sports</p>
+    <div class="clips pair">
+      <button class="clip" data-src="audio/speech/styles/ratan-sports.m4a"><span class="tag">A &middot; Bulbul, Ratan sports voice</span><span class="txt" lang="hi">आज रात आठ बजे भारत का मैच है, देर मत करना!</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/styles/oa-hi-sports.m4a"><span class="tag">B &middot; OpenAI, told &ldquo;excited sports commentator&rdquo;</span><span class="txt" lang="hi">आज रात आठ बजे भारत का मैच है, देर मत करना!</span><span class="bar"></span></button>
     </div>
-    <p class="listen">One voice, four instructions (OpenAI)</p>
-    <div class="clips">
-      <button class="clip" data-src="audio/speech/styles/oa-whisper.m4a"><span class="tag">A &middot; Whisper</span><span class="txt">The match starts at eight tonight. Don&rsquo;t be late.</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/styles/oa-commentator.m4a"><span class="tag">B &middot; Cricket commentator</span><span class="txt">The match starts at eight tonight. Don&rsquo;t be late.</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/styles/oa-bored.m4a"><span class="tag">C &middot; Bored</span><span class="txt">The match starts at eight tonight. Don&rsquo;t be late.</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/styles/oa-upset.m4a"><span class="tag">D &middot; Close to tears</span><span class="txt">The match starts at eight tonight. Don&rsquo;t be late.</span><span class="bar"></span></button>
+    <p class="listen">Late-night radio</p>
+    <div class="clips pair">
+      <button class="clip" data-src="audio/speech/styles/ratan-latenight.m4a"><span class="tag">C &middot; Bulbul, Ratan latenight voice</span><span class="txt" lang="hi">आज रात आठ बजे भारत का मैच है, देर मत करना!</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/styles/oa-hi-latenight.m4a"><span class="tag">D &middot; OpenAI, told &ldquo;late-night radio host&rdquo;</span><span class="txt" lang="hi">आज रात आठ बजे भारत का मैच है, देर मत करना!</span><span class="bar"></span></button>
     </div>
-    <p class="listen">One speaker, four styles (Bulbul&rsquo;s Ratan)</p>
-    <div class="clips">
-      <button class="clip" data-src="audio/speech/styles/ratan-sports.m4a"><span class="tag">E &middot; Sports</span><span class="txt" lang="hi">आज रात आठ बजे भारत का मैच है, देर मत करना!</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/styles/ratan-latenight.m4a"><span class="tag">F &middot; Late-night radio</span><span class="txt" lang="hi">आज रात आठ बजे भारत का मैच है, देर मत करना!</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/styles/ratan-devotional.m4a"><span class="tag">G &middot; Devotional</span><span class="txt" lang="hi">आज रात आठ बजे भारत का मैच है, देर मत करना!</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/styles/ratan-documentary.m4a"><span class="tag">H &middot; Documentary</span><span class="txt" lang="hi">आज रात आठ बजे भारत का मैच है, देर मत करना!</span><span class="bar"></span></button>
+    <p class="listen">Devotional</p>
+    <div class="clips pair">
+      <button class="clip" data-src="audio/speech/styles/ratan-devotional.m4a"><span class="tag">E &middot; Bulbul, Ratan devotional voice</span><span class="txt" lang="hi">आज रात आठ बजे भारत का मैच है, देर मत करना!</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/styles/oa-hi-devotional.m4a"><span class="tag">F &middot; OpenAI, told &ldquo;devotional programme&rdquo;</span><span class="txt" lang="hi">आज रात आठ बजे भारत का मैच है, देर मत करना!</span><span class="bar"></span></button>
+    </div>
+    <p class="listen">Documentary</p>
+    <div class="clips pair">
+      <button class="clip" data-src="audio/speech/styles/ratan-documentary.m4a"><span class="tag">G &middot; Bulbul, Ratan documentary voice</span><span class="txt" lang="hi">आज रात आठ बजे भारत का मैच है, देर मत करना!</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/styles/oa-hi-documentary.m4a"><span class="tag">H &middot; OpenAI, told &ldquo;documentary narrator&rdquo;</span><span class="txt" lang="hi">आज रात आठ बजे भारत का मैच है, देर मत करना!</span><span class="bar"></span></button>
     </div>
   </section>
 
@@ -300,10 +294,7 @@
     <h2>Ten languages, one hello</h2>
     <p>Each language has its own sounds and its own script, and a model is only as good as its data in each. The gap between languages is wide: letter-to-sound error is about 0.5% for English and Czech, but about 38% averaged over 507 languages.</p>
     <p>One greeting in all ten languages that have Bulbul V4 voices. Hindi and English have over a hundred voices; Tamil, Telugu and Kannada have four each.</p>
-    <div class="narr">
-      <button class="clip" data-src="audio/speech/languages/intro.m4a"><span class="tag">Bulbul explains</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/languages/outro.m4a"><span class="tag">Bulbul's takeaway</span><span class="bar"></span></button>
-    </div>
+    <div class="narr" data-intro="audio/speech/languages/intro.m4a" data-outro="audio/speech/languages/outro.m4a"></div>
     <p class="listen">Listen</p>
     <div class="clips">
       <button class="clip" data-src="audio/speech/languages/a.m4a"><span class="tag">A &middot; Hindi</span><span class="txt" lang="hi">नमस्ते! आप कैसे हैं?</span><span class="bar"></span></button>
@@ -324,10 +315,7 @@
     <h2>On a phone line</h2>
     <p>Wideband speech is sampled at 16 kHz or more. A classic phone line samples at 8 kHz and passes only about 300 to 3400 Hz. The high frequencies that make "s" and "sh" crisp are cut off. Telephone speech also roughly doubles speech-recognition error.</p>
     <p>Most Indian voice bots live on this narrow channel, so a voice has to stay clear on it. Clip B is clip A, band-limited and resampled to 8 kHz the way a phone line would.</p>
-    <div class="narr">
-      <button class="clip" data-src="audio/speech/phone/intro.m4a"><span class="tag">Bulbul explains</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/phone/outro.m4a"><span class="tag">Bulbul's takeaway</span><span class="bar"></span></button>
-    </div>
+    <div class="narr" data-intro="audio/speech/phone/intro.m4a" data-outro="audio/speech/phone/outro.m4a"></div>
     <p class="listen">Listen</p>
     <div class="clips">
       <button class="clip" data-src="audio/speech/phone/a.m4a"><span class="tag">A &middot; Full band (24 kHz)</span><span class="txt" lang="hi">नमस्ते, मैं आपके बैंक से बोल रहा हूँ। आपकी अगली EMI 15 तारीख़ को है।</span><span class="bar"></span></button>
@@ -335,50 +323,54 @@
     </div>
   </section>
 
-  <section class="slide" id="streaming" data-part="Delivery" data-title="Streaming: how small can a chunk be?">
+  <section class="slide" id="streaming" data-part="Delivery" data-title="Streaming: smaller chunks, sooner sound, up to a point">
     <p class="kicker">Delivery &middot; Streaming</p>
-    <h2>Streaming: how small can a chunk be?</h2>
-    <p>A voice agent wants to start speaking before the language model has finished writing. So it cuts the reply into chunks and sends each chunk to TTS as soon as it arrives. Smaller chunks mean the first sound comes sooner. I measured what else they change, with Kokoro-82M on a 67-second essay.</p>
-    <p>The surprise: chunks smaller than a clause make the audio itself longer. The duration predictor decides how long each sound lasts from the phrase around it. Give it a lone fragment and it stretches that fragment like a whole sentence. Token by token, the essay took 331 seconds to say instead of 67.</p>
-    <table class="stat">
-      <thead><tr><th>Chunking</th><th>TTS calls</th><th>First audio</th><th>Audio length</th></tr></thead>
+    <h2>Smaller chunks, sooner sound, up to a point</h2>
+    <p>A voice agent wants to start speaking before the language model has finished writing. So it cuts the reply into chunks and sends each chunk to TTS as soon as it arrives. Smaller chunks mean the first sound comes sooner. I measured this with Kokoro-82M on a 67-second essay.</p>
+    <p>Two things matter: how soon the first sound comes (time to first audio), and whether the speech still flows once it starts.</p>
+    <div class="stat-wrap"><table class="stat">
+      <thead><tr><th>Chunking</th><th>TTS calls</th><th>First audio</th><th>Audio length</th><th>How it sounds</th></tr></thead>
       <tbody>
-        <tr><td>Whole reply</td><td>1</td><td>9014 ms</td><td>1.00&times;</td></tr>
-        <tr><td>Sentence</td><td>9</td><td>1354 ms</td><td>1.06&times;</td></tr>
-        <tr><td>Clause</td><td>24</td><td>632 ms</td><td>1.16&times;</td></tr>
-        <tr><td>Word</td><td>173</td><td>541 ms</td><td>3.39&times;</td></tr>
-        <tr><td>Token</td><td>260</td><td>474 ms</td><td>4.92&times;</td></tr>
+        <tr><td>Whole reply</td><td>1</td><td>9014 ms</td><td>1.00&times;</td><td>natural, after 9 s of silence</td></tr>
+        <tr><td>Sentence</td><td>9</td><td>1354 ms</td><td>1.06&times;</td><td>natural</td></tr>
+        <tr class="sweet"><td>Short first chunk, then sentences <span class="badge">sweet spot</span></td><td>6</td><td>516 ms</td><td>1.04&times;</td><td>natural</td></tr>
+        <tr><td>Clause</td><td>24</td><td>632 ms</td><td>1.16&times;</td><td>natural, small seams</td></tr>
+        <tr><td>Word</td><td>173</td><td>541 ms</td><td>3.39&times;</td><td>choppy, word by word</td></tr>
+        <tr class="fastest"><td>Token <span class="badge">fastest start</span></td><td>260</td><td>474 ms</td><td>4.92&times;</td><td>a toddler sounding out each piece</td></tr>
       </tbody>
-    </table>
-    <p>Below a clause you gain about 150 ms and pay with speech that is 3 to 5 times longer. An adaptive policy (a short first chunk, then whole sentences) got 516 ms to first audio at 1.04&times; length. Each clip below is the essay's first sentence, spoken by joining the chunks:</p>
-    <p class="listen">Listen</p>
+    </table></div>
+    <p><strong>The fastest start is token by token, at 474 ms.</strong> But the gain flattens early. Going from the whole reply to clauses cuts the wait from 9 s to 0.6 s. Going on from clauses to tokens saves only another 158 ms, and it wrecks the speech. The next chunk always arrives in time: no run ever stalled. The problem is that each fragment is spoken like a sentence of its own, with its own rise, fall and pause. The voice sounds like a toddler reading word by word, and the essay takes 331 s to say instead of 67.</p>
+    <p><strong>The sweet spot is a short first chunk, then whole sentences:</strong> 516 ms to first audio, only 42 ms slower than token by token, from 6 calls, with speech just 4% longer and no audible breaks. Clauses are close behind.</p>
+    <p class="listen">Each clip is the essay&rsquo;s first sentence, spoken by joining the chunks</p>
     <div class="clips">
-      <button class="clip" data-src="audio/speech/streaming/sentence.m4a"><span class="tag">A &middot; Sentence</span><span class="meta">1 chunk &middot; 9.6 s</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/streaming/clause.m4a"><span class="tag">B &middot; Clause</span><span class="meta">3 chunks &middot; 10.4 s</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/streaming/word.m4a"><span class="tag">C &middot; Word</span><span class="meta">22 chunks &middot; 29.1 s</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/streaming/token.m4a"><span class="tag">D &middot; Token</span><span class="meta">33 chunks &middot; 41.7 s</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/streaming/sentence.m4a"><span class="tag">A &middot; Sentence</span><span class="meta">1 chunk &middot; 9.6 s &middot; flows</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/streaming/clause.m4a"><span class="tag">B &middot; Clause</span><span class="meta">3 chunks &middot; 10.4 s &middot; fast start, still flows</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/streaming/word.m4a"><span class="tag">C &middot; Word</span><span class="meta">22 chunks &middot; 29.1 s &middot; choppy</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/streaming/token.m4a"><span class="tag">D &middot; Token</span><span class="meta">33 chunks &middot; 41.7 s &middot; fastest start, flow broken</span><span class="bar"></span></button>
     </div>
-    <p class="txt" style="font-size:0.95rem">"In 1952, at Bell Labs, Dr. Davis and his colleagues built Audrey, a machine that recognised spoken digits from a single speaker."</p>
+    <p class="txt" style="font-size:0.95rem">&ldquo;In 1952, at Bell Labs, Dr. Davis and his colleagues built Audrey, a machine that recognised spoken digits from a single speaker.&rdquo;</p>
     <p class="ref">Measured on an RTX 4090 Laptop, synthetic token stream at 40 tokens/s.</p>
   </section>
 
   <section class="slide" id="limits" data-part="Limits" data-title="Laughs, sighs and whispers">
     <p class="kicker">Limits &middot; Emotion and expression</p>
     <h2>Laughs, sighs and whispers</h2>
-    <p>Laughs, sighs and whispers are not words. A model needs a separate way to make them, such as a tag or an instruction. Without one it reads the letters. Bulbul V4 Flash has no tags, so it reads all of these out as text. A model that takes instructions can actually laugh.</p>
-    <div class="narr">
-      <button class="clip" data-src="audio/speech/limits/intro2.m4a"><span class="tag">Bulbul explains</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/limits/outro2.m4a"><span class="tag">Bulbul&rsquo;s takeaway</span><span class="bar"></span></button>
+    <p>Laughs, sighs and whispers are not words. A model needs a separate way to make them, such as a tag or an instruction. Without one it reads the letters. Each row is the same line: typed into Bulbul V4 Flash, which has no tags, and given to OpenAI as an instruction.</p>
+    <div class="narr" data-intro="audio/speech/limits/intro2.m4a" data-outro="audio/speech/limits/outro2.m4a"></div>
+    <p class="listen">Laugh</p>
+    <div class="clips pair">
+      <button class="clip" data-src="audio/speech/limits/a.m4a"><span class="tag">A &middot; Bulbul, typed</span><span class="txt">Haha! That was so funny.</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/limits/openai-laugh.m4a"><span class="tag">B &middot; OpenAI, told to laugh</span><span class="txt">Haha! That was so funny.</span><span class="bar"></span></button>
     </div>
-    <p class="listen">Typed into Bulbul</p>
-    <div class="clips">
-      <button class="clip" data-src="audio/speech/limits/a.m4a"><span class="tag">A &middot; Typed laugh</span><span class="txt">Haha! That was so funny.</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/limits/whisper-tag.m4a"><span class="tag">B &middot; Stage direction</span><span class="txt">(whispers) Come closer, I have a secret.</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/limits/sigh-tag.m4a"><span class="tag">C &middot; Tag</span><span class="txt">[sighs] I am so tired today.</span><span class="bar"></span></button>
+    <p class="listen">Whisper</p>
+    <div class="clips pair">
+      <button class="clip" data-src="audio/speech/limits/whisper-tag.m4a"><span class="tag">C &middot; Bulbul, typed</span><span class="txt">(whispers) Come closer, I have a secret.</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/limits/openai-whisper.m4a"><span class="tag">D &middot; OpenAI, told to whisper</span><span class="txt">Come closer, I have a secret.</span><span class="bar"></span></button>
     </div>
-    <p class="listen">Given as an instruction (OpenAI)</p>
-    <div class="clips">
-      <button class="clip" data-src="audio/speech/limits/openai-laugh.m4a"><span class="tag">D &middot; &ldquo;Burst out laughing first&rdquo;</span><span class="txt">Haha! That was so funny.</span><span class="bar"></span></button>
+    <p class="listen">Sigh</p>
+    <div class="clips pair">
+      <button class="clip" data-src="audio/speech/limits/sigh-tag.m4a"><span class="tag">E &middot; Bulbul, typed</span><span class="txt">[sighs] I am so tired today.</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/limits/openai-sigh.m4a"><span class="tag">F &middot; OpenAI, told to sigh</span><span class="txt">I am so tired today.</span><span class="bar"></span></button>
     </div>
   </section>
 
@@ -403,30 +395,72 @@
 
 <script>
 (function () {
-  /* ---------- Audio: one shared player, nothing loads until a clip is pressed ---------- */
+  /* ---------- Audio: one shared player; a slide plays as a queue: explanation, clips, takeaway ---------- */
   const player = new Audio();
   player.preload = 'none';
-  let current = null;
+  let current = null;   // { src, btn, label } now playing
+  let queue = [];       // what plays after it
+  let slideBtn = null;  // the "Play this slide" button while its queue runs
 
-  function stop() {
-    player.pause();
-    if (current) { current.classList.remove('playing'); current.style.setProperty('--p', 0); }
+  function clearCurrent() {
+    if (current && current.btn) { current.btn.classList.remove('playing'); current.btn.style.setProperty('--p', 0); }
     current = null;
   }
+  function stop() {
+    queue = [];
+    player.pause();
+    clearCurrent();
+    if (slideBtn) { slideBtn.classList.remove('playing'); slideBtn.textContent = '▶ Play this slide'; slideBtn = null; }
+  }
+  function start(item) {
+    clearCurrent();
+    current = item;
+    if (item.btn) item.btn.classList.add('playing');
+    if (slideBtn) slideBtn.textContent = '■ Stop · ' + item.label;
+    player.src = item.src;
+    player.play().catch(stop);
+  }
   player.addEventListener('timeupdate', () => {
-    if (current && player.duration) current.style.setProperty('--p', player.currentTime / player.duration);
+    if (current && current.btn && player.duration) current.btn.style.setProperty('--p', player.currentTime / player.duration);
   });
-  player.addEventListener('ended', stop);
+  player.addEventListener('ended', () => { if (queue.length) start(queue.shift()); else stop(); });
 
   document.querySelectorAll('.clip').forEach((btn) => {
     btn.addEventListener('click', () => {
-      if (current === btn) { stop(); return; }
+      const same = current && current.btn === btn && !slideBtn;
       stop();
-      current = btn;
-      btn.classList.add('playing');
-      player.src = btn.dataset.src;
-      player.play().catch(stop);
+      if (!same) start({ src: btn.dataset.src, btn, label: '' });
     });
+  });
+
+  function slideItems(slide) {
+    const narr = slide.querySelector('.narr');
+    const items = [];
+    if (narr && narr.dataset.intro) items.push({ src: narr.dataset.intro, btn: null, label: 'Bulbul explains' });
+    slide.querySelectorAll('.clips .clip').forEach((btn) => {
+      items.push({ src: btn.dataset.src, btn, label: btn.querySelector('.tag').textContent.split('·')[0].trim() });
+    });
+    if (narr && narr.dataset.outro) items.push({ src: narr.dataset.outro, btn: null, label: 'Bulbul sums up' });
+    return items;
+  }
+  function playSlide(slide) {
+    const items = slideItems(slide);
+    stop();
+    if (!items.length) return;
+    slideBtn = slide.querySelector('.playall');
+    slideBtn.classList.add('playing');
+    queue = items.slice(1);
+    start(items[0]);
+  }
+  // One "Play this slide" button per slide with audio, where the narration used to sit.
+  document.querySelectorAll('.slide').forEach((slide) => {
+    if (!slideItems(slide).length) return;
+    const b = document.createElement('button');
+    b.className = 'playall';
+    b.textContent = '▶ Play this slide';
+    b.addEventListener('click', () => { if (slideBtn === b) stop(); else playSlide(slide); });
+    const at = slide.querySelector('.narr') || slide.querySelector('.listen');
+    at.parentNode.insertBefore(b, at);
   });
 
   /* ---------- Slides ---------- */
@@ -450,10 +484,13 @@
   });
   deck.classList.add('js');
 
+  // A slide plays itself the first time it is opened; after that, its button replays it.
+  const heard = new Set();
   function show(i, scroll) {
     index = Math.max(0, Math.min(slides.length - 1, i));
     slides.forEach((s, j) => { s.hidden = j !== index; });
     stop();
+    if (!heard.has(index)) { heard.add(index); playSlide(slides[index]); }
     count.textContent = (index + 1) + ' / ' + slides.length;
     jump.value = String(index);
     prev.disabled = index === 0;
@@ -471,8 +508,8 @@
     else if (e.key === 'ArrowLeft') show(index - 1);
   });
 
-  const start = slides.findIndex((s) => '#' + s.id === location.hash);
-  show(start < 0 ? 0 : start, start > 0);
+  const first = slides.findIndex((s) => '#' + s.id === location.hash);
+  show(first < 0 ? 0 : first, first > 0);
 })();
 </script>
     <script src="https://kit.fontawesome.com/5e9402fe3f.js" crossorigin="anonymous"></script>

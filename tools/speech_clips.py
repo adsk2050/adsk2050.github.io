@@ -154,6 +154,16 @@ CLIPS: list[C] = [
     bulbul("limits", "sigh-tag", "[sighs] I am so tired today.", "simran_en_conversation", "en-IN"),
     bulbul("limits", "dramatic", "Come closer, I have a secret.", "shubh_hi_stories_dramatic", "hi-IN"),
     C("limits", "cartesia-laugh", "cartesia", "[laughter] That was so funny.", "", model="sonic-3"),
+    C("limits", "openai-whisper", "openai", "Come closer, I have a secret.", "coral", model="gpt-4o-mini-tts",
+      instructions="Whisper the whole line, very softly, breathy, as if telling a secret."),
+    C("limits", "openai-sigh", "openai", "I am so tired today.", "coral", model="gpt-4o-mini-tts",
+      instructions="Let out a long, audible, heavy sigh first, then say the line exhausted."),
+    *[C("styles", f"oa-hi-{n}", "openai", MATCH, "coral", model="gpt-4o-mini-tts", instructions=i) for n, i in [
+        ("sports", "Speak Hindi as an excited TV sports commentator: loud, fast, high energy."),
+        ("latenight", "Speak Hindi as a late-night radio host: soft, slow, warm and intimate."),
+        ("devotional", "Speak Hindi as in a devotional programme: calm, reverent, slow and melodic."),
+        ("documentary", "Speak Hindi as a documentary narrator: measured, deep, neutral and clear."),
+    ]],
     C("limits", "openai-laugh", "openai", "Haha! That was so funny.", "coral", model="gpt-4o-mini-tts",
       instructions="Burst out laughing for a moment first, then say the line still giggling."),
 ]
