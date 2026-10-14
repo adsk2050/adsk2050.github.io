@@ -212,6 +212,31 @@ def build_streaming(exp001: Path) -> None:
         print(f"streaming/{arm}: {len(files)} chunks")
 
 
+def build_clips() -> None:
+    """Clips listed in speech_clips.py, from the raw audio speech_synth.py made."""
+    from speech_clips import CLIPS
+    from speech_synth import raw_path
+
+    missing = []
+    for c in CLIPS:
+        src = raw_path(c)
+        if not src.exists():
+            missing.append(f"{c.provider}:{c.slide}/{c.name}")
+            continue
+        encode(src, OUT / c.slide / f"{c.name}.m4a")
+    if missing:
+        print("not made yet (run speech_synth.py):", ", ".join(missing))
+
+
+def build_derived(cache: Path) -> None:
+    """Pace 1.0 played twice as fast: a plain time-stretch, to compare with the model's pace 2.0."""
+    text, lang, speaker, pace = LESSONS["pace"]["clips"][1]
+    wav = cache / f"tts-{cache_key(text, lang, speaker, pace)}.wav"
+    dst = OUT / "pace" / "sped2x.m4a"
+    subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", str(wav), "-af", "atempo=2.0", "-ac", "1",
+                    "-c:a", "aac", "-b:a", BITRATE, "-movflags", "+faststart", str(dst)], check=True)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--bulbul-cache", type=Path, default=Path("D:/bulbul-build/data/cache"))
@@ -220,6 +245,8 @@ def main() -> None:
     args = ap.parse_args()
     build_lessons(args.bulbul_cache)
     build_streaming(args.exp001)
+    build_derived(args.bulbul_cache)
+    build_clips()
 
 
 if __name__ == "__main__":
