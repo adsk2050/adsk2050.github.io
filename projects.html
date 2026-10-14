@@ -36,8 +36,8 @@
                 <h3>Shrota: AI phone surveys</h3>
                 <div class="black-box">
                     <p><a href="https://getaicati.com" target="_blank">Shrota</a> is an AI-powered CATI (computer-assisted telephone interviewing) platform for running phone surveys in India, in Hindi and other Indian languages. See it live at <a href="https://getaicati.com" target="_blank">getaicati.com</a>.</p>
-                    <p>Surveys are designed in a web builder and compiled into LangGraph conversation graphs. An AI interviewer then runs them over real phone calls through LiveKit and SIP.</p>
-                    <p>Studies dial contact lists in waves, with call records, live monitoring and per-call tracing.</p>
+                    <p>A researcher designs the survey in a web builder. Then a voice agent calls each respondent and asks the questions in Hindi. I built all of it on my own, and it is pre-launch right now, running on test calls.</p>
+                    <p>Studies dial contact lists in waves, with call records, live monitoring and per-call tracing. Latency and cost are tracked on every call, and a call carries on with a backup vendor if one fails.</p>
                 </div>
                 <h4>Technologies used:</h4>
                 <ul>
@@ -51,6 +51,22 @@
                 </ul>
             </div>
             <img src="./shrota-monitor.png" alt="Shrota campaign monitor showing waves, calls by outcome and contacts by status"/>
+        </article>
+        <article>
+            <div class="text">
+                <h4>Research, not published</h4>
+                <h3>Rewriting only the part that changed</h3>
+                <div class="black-box">
+                    <p>Say an LLM fills a form or a spreadsheet that has to follow a schema, and you want to change one answer or 10 rows out of 10,000. Today the model writes the whole thing again. I wanted to know if it can write only the changed part and splice it back, with the schema still valid.</p>
+                    <p>I ran two experiments on Gemini. Edits took 172x fewer output tokens than writing the whole output again. The code and results are in <a href="https://github.com/adsk2050/research-experiments" target="_blank">my research repo</a>.</p>
+                </div>
+                <h4>Technologies used:</h4>
+                <ul>
+                    <li>Structured outputs</li>
+                    <li>Gemini</li>
+                    <li>Python</li>
+                </ul>
+            </div>
         </article>
         <article class="reverse">
             <div class="text">
