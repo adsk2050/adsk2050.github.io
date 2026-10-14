@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="How text-to-speech works, one concept per slide, with clips you can play: text normalisation, scripts, code-mixing, prosody, pace, style, languages, phone lines and streaming.">
+    <meta name="description" content="How text-to-speech works, one concept per slide, with clips you can play: text normalisation, scripts, code-mixing, heteronyms, schwa deletion, prosody, stress, pace, style, languages, phone lines, streaming and emotion.">
     <link rel="stylesheet" href="../style.css" type="text/css">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
     <script src="../theme-switcher.js"></script>
@@ -118,109 +118,180 @@
   <section class="slide" id="start" data-part="Start" data-title="How this works">
     <p class="kicker">Start here</p>
     <h2>How this works</h2>
-    <p>Most of the clips come from <strong>Bulbul V4 Flash</strong>, Sarvam's text-to-speech model for Indian languages. In nine of the slides Bulbul also explains the idea out loud, in its own voice, before you hear the examples. Press <em>Bulbul explains</em> for that.</p>
-    <p>The streaming slide uses Kokoro, a small open model I ran on my laptop for an experiment.</p>
-    <p>Every clip is labelled A, B, C. Within a slide, only one thing changes between them: the script, the voice, the punctuation, the pace, or the channel.</p>
+    <p>Most clips come from <strong>Bulbul V4 Flash</strong>, Sarvam&rsquo;s text-to-speech model for Indian languages. On many slides Bulbul also explains the idea out loud, in its own voice. Press <em>Bulbul explains</em> for that.</p>
+    <p>Where Bulbul gets everything right, there would be nothing to hear, so some slides use another model that gets it wrong: Kokoro, a small open model I run on my laptop, or OpenAI&rsquo;s TTS. Each slide says which.</p>
+    <p>Clips are labelled A, B, C. Within a group, only one thing changes: the script, the reader, the punctuation, the pace, or the style.</p>
     <p>Headphones help, especially on the phone-line slide.</p>
   </section>
 
   <section class="slide" id="numbers" data-part="Reading the text" data-title="Numbers, dates and acronyms">
     <p class="kicker">Reading the text &middot; Text normalisation</p>
     <h2>Numbers, dates and acronyms</h2>
-    <p>Before a model can speak, it has to decide how to say what is written. <code>₹5,00,000</code> is "five lakh rupees", not "five comma zero zero". A date can be read several ways. A PNR is read digit by digit, a phone number in groups. Some acronyms are words (ISRO), others are letters (EMI).</p>
-    <p>This step is called text normalisation. It turns "non-standard words" into words you can pronounce, and it needs context to do it.</p>
+    <p>Before a model can speak, it rewrites symbols as words. This is called text normalisation, and the rules are local. An Indian reader says <code>₹5,00,000</code> as &ldquo;five lakh rupees&rdquo;. A reader built on American rules has never seen commas in those places.</p>
+    <p>The same digits also change with context. <code>1800</code> is a phone number, a year, a price or a time, depending on the words around it.</p>
     <div class="narr">
-      <button class="clip" data-src="audio/speech/numbers/intro.m4a"><span class="tag">Bulbul explains</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/numbers/outro.m4a"><span class="tag">Bulbul's takeaway</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/numbers/intro2.m4a"><span class="tag">Bulbul explains</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/numbers/outro2.m4a"><span class="tag">Bulbul&rsquo;s takeaway</span><span class="bar"></span></button>
     </div>
-    <p class="listen">Listen</p>
+    <p class="listen">Same text, two readers</p>
     <div class="clips">
-      <button class="clip" data-src="audio/speech/numbers/a.m4a"><span class="tag">A &middot; Money</span><span class="txt">Your loan of ₹5,00,000 is approved.</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/numbers/b.m4a"><span class="tag">B &middot; Date and time</span><span class="txt">Your train leaves on 12/10/2026 at 9:47 am.</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/numbers/c.m4a"><span class="tag">C &middot; PNR and phone</span><span class="txt">PNR 4521876390. For help, call 98765 43210.</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/numbers/d.m4a"><span class="tag">D &middot; Acronyms</span><span class="txt">ISRO launched it, but the EMI is still due.</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/numbers/in-loan.m4a"><span class="tag">A &middot; Indian reader (Bulbul)</span><span class="txt">Your loan of ₹5,00,000 is due on 12/10/2026.</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/numbers/us-loan.m4a"><span class="tag">B &middot; American reader (Kokoro)</span><span class="txt">Your loan of ₹5,00,000 is due on 12/10/2026.</span><span class="bar"></span></button>
+    </div>
+    <p class="listen">Same digits, four contexts</p>
+    <div class="clips">
+      <button class="clip" data-src="audio/speech/numbers/n-phone.m4a"><span class="tag">C &middot; Phone</span><span class="txt">Call 1800 now.</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/numbers/n-year.m4a"><span class="tag">D &middot; Year</span><span class="txt">He was born in 1800.</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/numbers/n-price.m4a"><span class="tag">E &middot; Price</span><span class="txt">Pay ₹1800 today.</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/numbers/n-time.m4a"><span class="tag">F &middot; Time</span><span class="txt">The train leaves at 18:00.</span><span class="bar"></span></button>
     </div>
   </section>
 
   <section class="slide" id="script" data-part="Reading the text" data-title="Devanagari vs romanised Hindi">
     <p class="kicker">Reading the text &middot; Spelling to sound</p>
     <h2>Devanagari vs romanised Hindi</h2>
-    <p>A TTS model turns letters (graphemes) into sounds (phonemes). Devanagari spells Hindi sounds almost one to one. Romanised Hindi does not: "a" might be a short <span lang="hi">अ</span> or a long <span lang="hi">आ</span>, and the model has to guess.</p>
-    <p>Same sentence, same voice, two scripts.</p>
+    <p>A model turns letters (graphemes) into sounds (phonemes). Devanagari spells Hindi almost one to one. Latin letters bring English habits with them: <em>main</em> becomes &ldquo;mane&rdquo;, <em>do</em> becomes &ldquo;doo&rdquo;, <em>ruko</em> becomes &ldquo;roo-koh&rdquo;.</p>
+    <p>Same voice, same model, same sentence. Only the script changes. Under each clip are the sounds the model decided to say.</p>
     <div class="narr">
-      <button class="clip" data-src="audio/speech/script/intro.m4a"><span class="tag">Bulbul explains</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/script/outro.m4a"><span class="tag">Bulbul's takeaway</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/script/intro2.m4a"><span class="tag">Bulbul explains</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/script/outro2.m4a"><span class="tag">Bulbul&rsquo;s takeaway</span><span class="bar"></span></button>
     </div>
     <p class="listen">Listen</p>
     <div class="clips">
-      <button class="clip" data-src="audio/speech/script/a.m4a"><span class="tag">A &middot; Devanagari</span><span class="txt" lang="hi">आज मौसम बहुत अच्छा है, चलो बाहर चाय पीते हैं।</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/script/b.m4a"><span class="tag">B &middot; Romanised</span><span class="txt">Aaj mausam bahut accha hai, chalo bahar chai peete hain.</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/script/k-deva.m4a"><span class="tag">A &middot; Devanagari</span><span class="txt" lang="hi">मैं दो मिनट में आता हूँ, बस रुको।</span><span class="meta">mɛ̃ doː mɪnəʈ mẽː aːtaː hũ, bʌs ɾʊkoː</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/script/k-roman.m4a"><span class="tag">B &middot; Romanised</span><span class="txt">Main do minute mein aata hoon, bus ruko.</span><span class="meta">mAn duː mɪnɪt mAn ɑːtə huːn, bʌs ɹuːkQ</span><span class="bar"></span></button>
     </div>
+    <p class="ref">Clips from Kokoro-82M with its Hindi voice. The romanised text goes through English spelling rules.</p>
   </section>
 
-  <section class="slide" id="codemix" data-part="Reading the text" data-title="Hinglish: Hindi voice vs Hinglish voice">
+  <section class="slide" id="codemix" data-part="Reading the text" data-title="Hinglish needs a reader who knows both">
     <p class="kicker">Reading the text &middot; Code-mixing</p>
-    <h2>Hinglish: Hindi voice vs Hinglish voice</h2>
-    <p>Indians mix Hindi and English inside one sentence. The usual way to write it for TTS is Hindi words in Devanagari and English words in Latin script. The front end then has to pick the right sounds for each word, in each language.</p>
-    <p>The same Hinglish sentence, first with a Hindi voice, then with a voice made for Hinglish. Listen to the English words. Bulbul's explanation here is itself in Hinglish.</p>
+    <h2>Hinglish needs a reader who knows both</h2>
+    <p>Indians mix Hindi and English inside one sentence. For every word, the reader has to decide: Hindi rules or English rules? A reader that knows only one language gets the other half wrong.</p>
+    <p>The same romanised Hinglish line, read by an English-only voice and by a Hinglish voice. Listen to <em>kal</em>, <em>ho gayi</em> and <em>karte hain</em>.</p>
     <div class="narr">
-      <button class="clip" data-src="audio/speech/codemix/intro.m4a"><span class="tag">Bulbul explains (Hinglish)</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/codemix/outro.m4a"><span class="tag">Bulbul's takeaway</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/codemix/intro2.m4a"><span class="tag">Bulbul explains (Hinglish)</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/codemix/outro.m4a"><span class="tag">Bulbul&rsquo;s takeaway</span><span class="bar"></span></button>
     </div>
     <p class="listen">Listen</p>
     <div class="clips">
-      <button class="clip" data-src="audio/speech/codemix/a.m4a"><span class="tag">A &middot; Hindi voice</span><span class="txt" lang="hi">Kal की meeting cancel हो गई, तो weekend पर movie plan करते हैं।</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/codemix/b.m4a"><span class="tag">B &middot; Hinglish voice</span><span class="txt" lang="hi">Kal की meeting cancel हो गई, तो weekend पर movie plan करते हैं।</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/codemix/k-english.m4a"><span class="tag">A &middot; English-only reader (Kokoro)</span><span class="txt">Kal ki meeting cancel ho gayi, toh weekend pe movie plan karte hain.</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/codemix/b-roman-mix.m4a"><span class="tag">B &middot; Hinglish reader (Bulbul)</span><span class="txt">Kal ki meeting cancel ho gayi, toh weekend pe movie plan karte hain.</span><span class="bar"></span></button>
     </div>
   </section>
 
-  <section class="slide" id="punctuation" data-part="Prosody" data-title="Punctuation steers prosody">
-    <p class="kicker">Prosody &middot; Pauses and melody</p>
-    <h2>Punctuation steers prosody</h2>
-    <p>Prosody is the melody of speech: pitch, pauses, loudness and timing. Bulbul has no SSML and no pause tags, so punctuation is the only control you have. Prosody belongs to the phrase. Move a phrase boundary and the melody moves with it.</p>
-    <p>Same words, four kinds of mark: comma, full stop, exclamation, ellipsis.</p>
+  <section class="slide" id="heteronyms" data-part="Reading the text" data-title="Same spelling, two sounds">
+    <p class="kicker">Reading the text &middot; Heteronyms</p>
+    <h2>Same spelling, two sounds</h2>
+    <p>Some English words are spelt the same but said two ways: <em>read</em> (reed / red), <em>record</em> (REK-ord / ri-KORD), <em>wind</em>. The letters cannot decide. The model has to work out the grammar of the whole sentence.</p>
+    <p>Each clip says one spelling two ways, a few words apart.</p>
     <div class="narr">
-      <button class="clip" data-src="audio/speech/punctuation/intro.m4a"><span class="tag">Bulbul explains</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/punctuation/outro.m4a"><span class="tag">Bulbul's takeaway</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/heteronyms/intro.m4a"><span class="tag">Bulbul explains</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/heteronyms/outro.m4a"><span class="tag">Bulbul&rsquo;s takeaway</span><span class="bar"></span></button>
     </div>
     <p class="listen">Listen</p>
     <div class="clips">
-      <button class="clip" data-src="audio/speech/punctuation/a.m4a"><span class="tag">A &middot; Comma</span><span class="txt">Okay, I am coming, give me five minutes.</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/punctuation/b.m4a"><span class="tag">B &middot; Full stop</span><span class="txt">Okay. I am coming. Give me five minutes.</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/punctuation/c.m4a"><span class="tag">C &middot; Exclamation</span><span class="txt">Okay! I am coming! Give me five minutes!</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/punctuation/d.m4a"><span class="tag">D &middot; Ellipsis</span><span class="txt">Okay… I am coming… give me five minutes…</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/heteronyms/read.m4a"><span class="tag">A &middot; read</span><span class="txt">I read it yesterday, and I will read it again tomorrow.</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/heteronyms/record.m4a"><span class="tag">B &middot; record</span><span class="txt">Please record the record before the shop closes.</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/heteronyms/wind.m4a"><span class="tag">C &middot; wind</span><span class="txt">The wind was so strong that I had to wind the window shut.</span><span class="bar"></span></button>
     </div>
+  </section>
+
+  <section class="slide" id="schwa" data-part="Reading the text" data-title="The hidden vowel Hindi drops">
+    <p class="kicker">Reading the text &middot; Schwa deletion</p>
+    <h2>The hidden vowel Hindi drops</h2>
+    <p>Devanagari writes a short <em>a</em> after most consonants, but spoken Hindi drops many of them. कमला is <em>kamlaa</em>, not <em>kamalaa</em>. नमकीन is <em>namkeen</em>. The model must know which ones to drop.</p>
+    <p>Here the model is given the sounds directly, so only the vowels change. B keeps every written vowel and sounds like someone reading letter by letter.</p>
+    <p class="listen">Listen</p>
+    <div class="clips">
+      <button class="clip" data-src="audio/speech/schwa/dropped.m4a"><span class="tag">A &middot; Vowels dropped (right)</span><span class="txt" lang="hi">कमला ने नमकीन खरीदा।</span><span class="meta">kʌmlaː neː nəmkiːn kʰəɾiːdaː</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/schwa/kept.m4a"><span class="tag">B &middot; Every vowel kept (wrong)</span><span class="txt" lang="hi">कमला ने नमकीन खरीदा।</span><span class="meta">kʌməlaː neː nəməkiːnə kʰəɾiːdaː</span><span class="bar"></span></button>
+    </div>
+    <p class="ref">Clips from Kokoro-82M, given phonemes instead of text.</p>
+  </section>
+
+  <section class="slide" id="names" data-part="Reading the text" data-title="Fixing a name">
+    <p class="kicker">Reading the text &middot; Pronunciation dictionaries</p>
+    <h2>Fixing a name</h2>
+    <p>Every voice gets some names wrong. The usual fix is a pronunciation dictionary: a list of &ldquo;write this, say that&rdquo; pairs applied to the text before the model sees it. Respelling the word is the simplest version.</p>
+    <p class="listen">Listen</p>
+    <div class="clips">
+      <button class="clip" data-src="audio/speech/names/as-written.m4a"><span class="tag">A &middot; As written</span><span class="txt">Your flight from Thiruvananthapuram to Visakhapatnam is on time.</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/names/respelled.m4a"><span class="tag">B &middot; Respelled</span><span class="txt">Your flight from Thiru-vanan-tha-puram to Vi-shaa-kha-patnam is on time.</span><span class="bar"></span></button>
+    </div>
+    <p class="ref">Clips from OpenAI tts-1.</p>
+  </section>
+
+  <section class="slide" id="punctuation" data-part="Prosody" data-title="Move a comma, change the meaning">
+    <p class="kicker">Prosody &middot; Pauses and melody</p>
+    <h2>Move a comma, change the meaning</h2>
+    <p>Prosody is the melody of speech: pitch, pauses and timing. Bulbul has no pause tags, so punctuation is the control. Move one comma and the meaning flips. Change a full stop to a question mark and the end of the sentence should rise.</p>
+    <div class="narr">
+      <button class="clip" data-src="audio/speech/punctuation/intro2.m4a"><span class="tag">Bulbul explains</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/punctuation/outro.m4a"><span class="tag">Bulbul&rsquo;s takeaway</span><span class="bar"></span></button>
+    </div>
+    <p class="listen">Where the comma goes</p>
+    <div class="clips">
+      <button class="clip" data-src="audio/speech/punctuation/ruko-a.m4a"><span class="tag">A &middot; &ldquo;Stop, don&rsquo;t go&rdquo;</span><span class="txt" lang="hi">रुको, मत जाओ।</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/punctuation/ruko-b.m4a"><span class="tag">B &middot; &ldquo;Don&rsquo;t stop, go&rdquo;</span><span class="txt" lang="hi">रुको मत, जाओ।</span><span class="bar"></span></button>
+    </div>
+    <p class="listen">Statement or question</p>
+    <div class="clips">
+      <button class="clip" data-src="audio/speech/punctuation/statement.m4a"><span class="tag">C &middot; Statement</span><span class="txt" lang="hi">आप कल आ रहे हैं।</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/punctuation/question.m4a"><span class="tag">D &middot; Question</span><span class="txt" lang="hi">आप कल आ रहे हैं?</span><span class="bar"></span></button>
+    </div>
+  </section>
+
+  <section class="slide" id="emphasis" data-part="Prosody" data-title="Stress one word, change the meaning">
+    <p class="kicker">Prosody &middot; Emphasis</p>
+    <h2>Stress one word, change the meaning</h2>
+    <p>Text has no mark for stress, but stress changes meaning. &ldquo;I didn&rsquo;t say <strong>she</strong> stole it&rdquo;: someone else did. &ldquo;I didn&rsquo;t <strong>say</strong> she stole it&rdquo;: I only hinted. Some models take a spoken instruction for this. Bulbul has no stress control.</p>
+    <p class="listen">Same words, stress moves</p>
+    <div class="clips">
+      <button class="clip" data-src="audio/speech/emphasis/she.m4a"><span class="tag">A &middot; she</span><span class="txt">I didn&rsquo;t say <strong>she</strong> stole it.</span><span class="meta">someone else did</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/emphasis/say.m4a"><span class="tag">B &middot; say</span><span class="txt">I didn&rsquo;t <strong>say</strong> she stole it.</span><span class="meta">I only hinted it</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/emphasis/stole.m4a"><span class="tag">C &middot; stole</span><span class="txt">I didn&rsquo;t say she <strong>stole</strong> it.</span><span class="meta">she borrowed it</span><span class="bar"></span></button>
+    </div>
+    <p class="ref">Clips from OpenAI gpt-4o-mini-tts, with an instruction naming the word to stress.</p>
   </section>
 
   <section class="slide" id="pace" data-part="Prosody" data-title="Speaking rate">
     <p class="kicker">Prosody &middot; Duration</p>
     <h2>Speaking rate</h2>
-    <p>Models like FastSpeech predict how long each sound lasts, then a "length regulator" repeats each sound's frames to fill that time. A pace setting just scales those predicted durations. Slow suits teaching, normal suits talking, fast suits announcements.</p>
+    <p>Models like FastSpeech predict how long each sound lasts. A pace setting scales those predictions, here from half speed to double. Because the model re-plans the speech, fast speech stays clear. Compare it with D, the normal clip simply played twice as fast.</p>
     <div class="narr">
-      <button class="clip" data-src="audio/speech/pace/intro.m4a"><span class="tag">Bulbul explains</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/pace/intro2.m4a"><span class="tag">Bulbul explains</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/pace/outro2.m4a"><span class="tag">Bulbul&rsquo;s takeaway</span><span class="bar"></span></button>
     </div>
     <p class="listen">Listen</p>
     <div class="clips">
-      <button class="clip" data-src="audio/speech/pace/a.m4a"><span class="tag">A &middot; Pace 0.8</span><span class="txt" lang="hi">अगला स्टेशन नई दिल्ली है। कृपया अपना सामान साथ रखें।</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/pace/p05.m4a"><span class="tag">A &middot; Pace 0.5</span><span class="txt" lang="hi">अगला स्टेशन नई दिल्ली है। कृपया अपना सामान साथ रखें।</span><span class="bar"></span></button>
       <button class="clip" data-src="audio/speech/pace/b.m4a"><span class="tag">B &middot; Pace 1.0</span><span class="txt" lang="hi">अगला स्टेशन नई दिल्ली है। कृपया अपना सामान साथ रखें।</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/pace/c.m4a"><span class="tag">C &middot; Pace 1.25</span><span class="txt" lang="hi">अगला स्टेशन नई दिल्ली है। कृपया अपना सामान साथ रखें।</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/pace/p20.m4a"><span class="tag">C &middot; Pace 2.0</span><span class="txt" lang="hi">अगला स्टेशन नई दिल्ली है। कृपया अपना सामान साथ रखें।</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/pace/sped2x.m4a"><span class="tag">D &middot; B played 2&times; faster</span><span class="txt" lang="hi">अगला स्टेशन नई दिल्ली है। कृपया अपना सामान साथ रखें।</span><span class="bar"></span></button>
     </div>
   </section>
 
-  <section class="slide" id="styles" data-part="The voice" data-title="One speaker, four styles">
+  <section class="slide" id="styles" data-part="The voice" data-title="One voice, many styles">
     <p class="kicker">The voice &middot; Speaker and style</p>
-    <h2>One speaker, four styles</h2>
-    <p>Multi-speaker models learn a vector for each speaker (a speaker embedding). Style can be a second vector on top, as with Global Style Tokens. Bulbul's voice IDs show this split: <code>simran_hi_news</code> is speaker, language, style.</p>
-    <p>One speaker, Simran, in four styles. The words stay the same; only the delivery changes.</p>
+    <h2>One voice, many styles</h2>
+    <p>A voice has two parts: who is speaking, and how. Some models take the &ldquo;how&rdquo; as a free-text instruction. Others ship one speaker recorded in several styles.</p>
     <div class="narr">
-      <button class="clip" data-src="audio/speech/styles/intro.m4a"><span class="tag">Bulbul explains</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/styles/intro2.m4a"><span class="tag">Bulbul explains</span><span class="bar"></span></button>
     </div>
-    <p class="listen">Listen</p>
+    <p class="listen">One voice, four instructions (OpenAI)</p>
     <div class="clips">
-      <button class="clip" data-src="audio/speech/styles/a.m4a"><span class="tag">A &middot; Recovery desk</span><span class="txt" lang="hi">आज रात आठ बजे, शहर में बारिश की संभावना है।</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/styles/b.m4a"><span class="tag">B &middot; News</span><span class="txt" lang="hi">आज रात आठ बजे, शहर में बारिश की संभावना है।</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/styles/c.m4a"><span class="tag">C &middot; Late-night radio</span><span class="txt" lang="hi">आज रात आठ बजे, शहर में बारिश की संभावना है।</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/styles/d.m4a"><span class="tag">D &middot; Social, excited</span><span class="txt" lang="hi">आज रात आठ बजे, शहर में बारिश की संभावना है।</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/styles/oa-whisper.m4a"><span class="tag">A &middot; Whisper</span><span class="txt">The match starts at eight tonight. Don&rsquo;t be late.</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/styles/oa-commentator.m4a"><span class="tag">B &middot; Cricket commentator</span><span class="txt">The match starts at eight tonight. Don&rsquo;t be late.</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/styles/oa-bored.m4a"><span class="tag">C &middot; Bored</span><span class="txt">The match starts at eight tonight. Don&rsquo;t be late.</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/styles/oa-upset.m4a"><span class="tag">D &middot; Close to tears</span><span class="txt">The match starts at eight tonight. Don&rsquo;t be late.</span><span class="bar"></span></button>
+    </div>
+    <p class="listen">One speaker, four styles (Bulbul&rsquo;s Ratan)</p>
+    <div class="clips">
+      <button class="clip" data-src="audio/speech/styles/ratan-sports.m4a"><span class="tag">E &middot; Sports</span><span class="txt" lang="hi">आज रात आठ बजे भारत का मैच है, देर मत करना!</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/styles/ratan-latenight.m4a"><span class="tag">F &middot; Late-night radio</span><span class="txt" lang="hi">आज रात आठ बजे भारत का मैच है, देर मत करना!</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/styles/ratan-devotional.m4a"><span class="tag">G &middot; Devotional</span><span class="txt" lang="hi">आज रात आठ बजे भारत का मैच है, देर मत करना!</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/styles/ratan-documentary.m4a"><span class="tag">H &middot; Documentary</span><span class="txt" lang="hi">आज रात आठ बजे भारत का मैच है, देर मत करना!</span><span class="bar"></span></button>
     </div>
   </section>
 
@@ -291,18 +362,23 @@
     <p class="ref">Measured on an RTX 4090 Laptop, synthetic token stream at 40 tokens/s.</p>
   </section>
 
-  <section class="slide" id="limits" data-part="Limits" data-title="What TTS still cannot do">
+  <section class="slide" id="limits" data-part="Limits" data-title="Laughs, sighs and whispers">
     <p class="kicker">Limits &middot; Emotion and expression</p>
-    <h2>What TTS still cannot do</h2>
-    <p>Modern TTS sounds natural, but it is not yet fully emotive. Bulbul V4 Flash, the fast model, has no laughter, whisper or emotion tags (those are promised for V4 Pro). It does not sing, cannot clone a voice, and has no SSML. Malayalam and Odia have no V4 voices yet.</p>
-    <p>Here is what happens when you type a laugh: the model reads it as a word.</p>
+    <h2>Laughs, sighs and whispers</h2>
+    <p>Laughs, sighs and whispers are not words. A model needs a separate way to make them, such as a tag or an instruction. Without one it reads the letters. Bulbul V4 Flash has no tags, so it reads all of these out as text. A model that takes instructions can actually laugh.</p>
     <div class="narr">
-      <button class="clip" data-src="audio/speech/limits/intro.m4a"><span class="tag">Bulbul explains</span><span class="bar"></span></button>
-      <button class="clip" data-src="audio/speech/limits/outro.m4a"><span class="tag">Bulbul's takeaway</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/limits/intro2.m4a"><span class="tag">Bulbul explains</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/limits/outro2.m4a"><span class="tag">Bulbul&rsquo;s takeaway</span><span class="bar"></span></button>
     </div>
-    <p class="listen">Listen</p>
+    <p class="listen">Typed into Bulbul</p>
     <div class="clips">
-      <button class="clip" data-src="audio/speech/limits/a.m4a"><span class="tag">A &middot; Typed laughter</span><span class="txt">Haha! That was so funny.</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/limits/a.m4a"><span class="tag">A &middot; Typed laugh</span><span class="txt">Haha! That was so funny.</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/limits/whisper-tag.m4a"><span class="tag">B &middot; Stage direction</span><span class="txt">(whispers) Come closer, I have a secret.</span><span class="bar"></span></button>
+      <button class="clip" data-src="audio/speech/limits/sigh-tag.m4a"><span class="tag">C &middot; Tag</span><span class="txt">[sighs] I am so tired today.</span><span class="bar"></span></button>
+    </div>
+    <p class="listen">Given as an instruction (OpenAI)</p>
+    <div class="clips">
+      <button class="clip" data-src="audio/speech/limits/openai-laugh.m4a"><span class="tag">D &middot; &ldquo;Burst out laughing first&rdquo;</span><span class="txt">Haha! That was so funny.</span><span class="bar"></span></button>
     </div>
   </section>
 

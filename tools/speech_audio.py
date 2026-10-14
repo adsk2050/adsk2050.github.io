@@ -237,6 +237,15 @@ def build_derived(cache: Path) -> None:
                     "-c:a", "aac", "-b:a", BITRATE, "-movflags", "+faststart", str(dst)], check=True)
 
 
+def prune() -> None:
+    """Delete encoded clips the page does not play (unused candidates, replaced narration)."""
+    page = (OUT.parent.parent / "speech-you-can-hear.html").read_text(encoding="utf-8")
+    used = set(re.findall(r'data-src="audio/speech/([^"]+)"', page))
+    for f in OUT.rglob("*.m4a"):
+        if f.relative_to(OUT).as_posix() not in used:
+            f.unlink()
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--bulbul-cache", type=Path, default=Path("D:/bulbul-build/data/cache"))
@@ -247,6 +256,7 @@ def main() -> None:
     build_streaming(args.exp001)
     build_derived(args.bulbul_cache)
     build_clips()
+    prune()
 
 
 if __name__ == "__main__":
