@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="What I learned in Stanford CS224S about text-to-speech, as slides you can listen to: text normalisation, scripts, code-mixing, prosody, pace, style, languages, phone lines and streaming.">
+    <meta name="description" content="How text-to-speech works, one concept per slide, with clips you can play: text normalisation, scripts, code-mixing, prosody, pace, style, languages, phone lines and streaming.">
     <link rel="stylesheet" href="../style.css" type="text/css">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
     <script src="../theme-switcher.js"></script>
-    <title>Speech you can hear: TTS lessons from CS224S &middot; Anmol Deep</title>
+    <title>Speech you can hear: how text-to-speech works &middot; Anmol Deep</title>
 <style>
   .deck {
     --surface: var(--dkblue); --ink: var(--white);
@@ -102,8 +102,8 @@
     <main class="post">
         <header class="post-header">
             <p class="post-meta"><a href="./index.html">&larr; All posts</a> &middot; <time datetime="2026-10-14">14 October 2026</time> &middot; Interactive</p>
-            <h1>Speech you can hear: TTS lessons from CS224S</h1>
-            <p>What I learned about text-to-speech in Stanford's CS224S (Spoken Language Processing), one idea per slide. Each slide has a short explanation and a few clips that differ in one thing only. Play them one after the other and listen for the difference.</p>
+            <h1>Speech you can hear: how text-to-speech works</h1>
+            <p>How text-to-speech works, one concept per slide, in the order a sentence meets them: reading the text, prosody, the voice, and delivery. Each slide has a short explanation and a few clips that differ in one thing only. Play them one after the other and listen for the difference.</p>
         </header>
 
 <div class="deck" id="deck">
@@ -115,17 +115,17 @@
     <p class="keys">Arrow keys move between slides. Audio loads only when you press play.</p>
   </div>
 
-  <section class="slide" id="start" data-title="How this works">
+  <section class="slide" id="start" data-part="Start" data-title="How this works">
     <p class="kicker">Start here</p>
     <h2>How this works</h2>
     <p>Most of the clips come from <strong>Bulbul V4 Flash</strong>, Sarvam's text-to-speech model for Indian languages. In nine of the slides Bulbul also explains the idea out loud, in its own voice, before you hear the examples. Press <em>Bulbul explains</em> for that.</p>
     <p>The streaming slide uses Kokoro, a small open model I ran on my laptop for an experiment.</p>
-    <p>Every clip is labelled A, B, C. Within a slide, only one thing changes between them: the script, the voice, the punctuation, the pace, or the channel. Each slide ends with the lecture and slides where CS224S teaches the idea.</p>
+    <p>Every clip is labelled A, B, C. Within a slide, only one thing changes between them: the script, the voice, the punctuation, the pace, or the channel.</p>
     <p>Headphones help, especially on the phone-line slide.</p>
   </section>
 
-  <section class="slide" id="numbers" data-title="Numbers, dates and acronyms">
-    <p class="kicker">Lesson 1 &middot; Text normalisation</p>
+  <section class="slide" id="numbers" data-part="Reading the text" data-title="Numbers, dates and acronyms">
+    <p class="kicker">Reading the text &middot; Text normalisation</p>
     <h2>Numbers, dates and acronyms</h2>
     <p>Before a model can speak, it has to decide how to say what is written. <code>₹5,00,000</code> is "five lakh rupees", not "five comma zero zero". A date can be read several ways. A PNR is read digit by digit, a phone number in groups. Some acronyms are words (ISRO), others are letters (EMI).</p>
     <p>This step is called text normalisation. It turns "non-standard words" into words you can pronounce, and it needs context to do it.</p>
@@ -140,11 +140,10 @@
       <button class="clip" data-src="audio/speech/numbers/c.m4a"><span class="tag">C &middot; PNR and phone</span><span class="txt">PNR 4521876390. For help, call 98765 43210.</span><span class="bar"></span></button>
       <button class="clip" data-src="audio/speech/numbers/d.m4a"><span class="tag">D &middot; Acronyms</span><span class="txt">ISRO launched it, but the EMI is still due.</span><span class="bar"></span></button>
     </div>
-    <p class="ref">CS224S Lecture 3, slides 35 and 39&ndash;40: text normalisation of non-standard words.</p>
   </section>
 
-  <section class="slide" id="script" data-title="Devanagari vs romanised Hindi">
-    <p class="kicker">Lesson 2 &middot; Grapheme to phoneme</p>
+  <section class="slide" id="script" data-part="Reading the text" data-title="Devanagari vs romanised Hindi">
+    <p class="kicker">Reading the text &middot; Spelling to sound</p>
     <h2>Devanagari vs romanised Hindi</h2>
     <p>A TTS model turns letters (graphemes) into sounds (phonemes). Devanagari spells Hindi sounds almost one to one. Romanised Hindi does not: "a" might be a short <span lang="hi">अ</span> or a long <span lang="hi">आ</span>, and the model has to guess.</p>
     <p>Same sentence, same voice, two scripts.</p>
@@ -157,11 +156,10 @@
       <button class="clip" data-src="audio/speech/script/a.m4a"><span class="tag">A &middot; Devanagari</span><span class="txt" lang="hi">आज मौसम बहुत अच्छा है, चलो बाहर चाय पीते हैं।</span><span class="bar"></span></button>
       <button class="clip" data-src="audio/speech/script/b.m4a"><span class="tag">B &middot; Romanised</span><span class="txt">Aaj mausam bahut accha hai, chalo bahar chai peete hain.</span><span class="bar"></span></button>
     </div>
-    <p class="ref">CS224S Lecture 3, slides 41 and 45: letter-to-sound rules and G2P accuracy across languages.</p>
   </section>
 
-  <section class="slide" id="codemix" data-title="Hinglish: Hindi voice vs Hinglish voice">
-    <p class="kicker">Lesson 3 &middot; Code-mixing</p>
+  <section class="slide" id="codemix" data-part="Reading the text" data-title="Hinglish: Hindi voice vs Hinglish voice">
+    <p class="kicker">Reading the text &middot; Code-mixing</p>
     <h2>Hinglish: Hindi voice vs Hinglish voice</h2>
     <p>Indians mix Hindi and English inside one sentence. The usual way to write it for TTS is Hindi words in Devanagari and English words in Latin script. The front end then has to pick the right sounds for each word, in each language.</p>
     <p>The same Hinglish sentence, first with a Hindi voice, then with a voice made for Hinglish. Listen to the English words. Bulbul's explanation here is itself in Hinglish.</p>
@@ -174,11 +172,10 @@
       <button class="clip" data-src="audio/speech/codemix/a.m4a"><span class="tag">A &middot; Hindi voice</span><span class="txt" lang="hi">Kal की meeting cancel हो गई, तो weekend पर movie plan करते हैं।</span><span class="bar"></span></button>
       <button class="clip" data-src="audio/speech/codemix/b.m4a"><span class="tag">B &middot; Hinglish voice</span><span class="txt" lang="hi">Kal की meeting cancel हो गई, तो weekend पर movie plan करते हैं।</span><span class="bar"></span></button>
     </div>
-    <p class="ref">CS224S Lecture 3, slides 23 and 45: the front end chooses the phones, and G2P depends on the language.</p>
   </section>
 
-  <section class="slide" id="punctuation" data-title="Punctuation steers prosody">
-    <p class="kicker">Lesson 4 &middot; Prosody</p>
+  <section class="slide" id="punctuation" data-part="Prosody" data-title="Punctuation steers prosody">
+    <p class="kicker">Prosody &middot; Pauses and melody</p>
     <h2>Punctuation steers prosody</h2>
     <p>Prosody is the melody of speech: pitch, pauses, loudness and timing. Bulbul has no SSML and no pause tags, so punctuation is the only control you have. Prosody belongs to the phrase. Move a phrase boundary and the melody moves with it.</p>
     <p>Same words, four kinds of mark: comma, full stop, exclamation, ellipsis.</p>
@@ -193,11 +190,10 @@
       <button class="clip" data-src="audio/speech/punctuation/c.m4a"><span class="tag">C &middot; Exclamation</span><span class="txt">Okay! I am coming! Give me five minutes!</span><span class="bar"></span></button>
       <button class="clip" data-src="audio/speech/punctuation/d.m4a"><span class="tag">D &middot; Ellipsis</span><span class="txt">Okay… I am coming… give me five minutes…</span><span class="bar"></span></button>
     </div>
-    <p class="ref">CS224S Lecture 2, slide 49: prosodic boundaries. Lecture 3, slide 9: what prosody TTS must specify.</p>
   </section>
 
-  <section class="slide" id="pace" data-title="Speaking rate">
-    <p class="kicker">Lesson 5 &middot; Duration</p>
+  <section class="slide" id="pace" data-part="Prosody" data-title="Speaking rate">
+    <p class="kicker">Prosody &middot; Duration</p>
     <h2>Speaking rate</h2>
     <p>Models like FastSpeech predict how long each sound lasts, then a "length regulator" repeats each sound's frames to fill that time. A pace setting just scales those predicted durations. Slow suits teaching, normal suits talking, fast suits announcements.</p>
     <div class="narr">
@@ -209,11 +205,10 @@
       <button class="clip" data-src="audio/speech/pace/b.m4a"><span class="tag">B &middot; Pace 1.0</span><span class="txt" lang="hi">अगला स्टेशन नई दिल्ली है। कृपया अपना सामान साथ रखें।</span><span class="bar"></span></button>
       <button class="clip" data-src="audio/speech/pace/c.m4a"><span class="tag">C &middot; Pace 1.25</span><span class="txt" lang="hi">अगला स्टेशन नई दिल्ली है। कृपया अपना सामान साथ रखें।</span><span class="bar"></span></button>
     </div>
-    <p class="ref">CS224S Lecture 5, slides 105&ndash;106: FastSpeech's length regulator and duration predictor.</p>
   </section>
 
-  <section class="slide" id="styles" data-title="One speaker, four styles">
-    <p class="kicker">Lesson 6 &middot; Speaker and style</p>
+  <section class="slide" id="styles" data-part="The voice" data-title="One speaker, four styles">
+    <p class="kicker">The voice &middot; Speaker and style</p>
     <h2>One speaker, four styles</h2>
     <p>Multi-speaker models learn a vector for each speaker (a speaker embedding). Style can be a second vector on top, as with Global Style Tokens. Bulbul's voice IDs show this split: <code>simran_hi_news</code> is speaker, language, style.</p>
     <p>One speaker, Simran, in four styles. The words stay the same; only the delivery changes.</p>
@@ -227,13 +222,12 @@
       <button class="clip" data-src="audio/speech/styles/c.m4a"><span class="tag">C &middot; Late-night radio</span><span class="txt" lang="hi">आज रात आठ बजे, शहर में बारिश की संभावना है।</span><span class="bar"></span></button>
       <button class="clip" data-src="audio/speech/styles/d.m4a"><span class="tag">D &middot; Social, excited</span><span class="txt" lang="hi">आज रात आठ बजे, शहर में बारिश की संभावना है।</span><span class="bar"></span></button>
     </div>
-    <p class="ref">CS224S Lecture 5, slides 59 and 96: speaker embeddings and Global Style Tokens.</p>
   </section>
 
-  <section class="slide" id="languages" data-title="Ten languages, one hello">
-    <p class="kicker">Lesson 7 &middot; Languages</p>
+  <section class="slide" id="languages" data-part="The voice" data-title="Ten languages, one hello">
+    <p class="kicker">The voice &middot; Languages</p>
     <h2>Ten languages, one hello</h2>
-    <p>Each language has its own sounds and its own script, and a model is only as good as its data in each. The course shows how wide the gap is: letter-to-sound error is about 0.5% for English and Czech, but about 38% averaged over 507 languages.</p>
+    <p>Each language has its own sounds and its own script, and a model is only as good as its data in each. The gap between languages is wide: letter-to-sound error is about 0.5% for English and Czech, but about 38% averaged over 507 languages.</p>
     <p>One greeting in all ten languages that have Bulbul V4 voices. Hindi and English have over a hundred voices; Tamil, Telugu and Kannada have four each.</p>
     <div class="narr">
       <button class="clip" data-src="audio/speech/languages/intro.m4a"><span class="tag">Bulbul explains</span><span class="bar"></span></button>
@@ -252,13 +246,12 @@
       <button class="clip" data-src="audio/speech/languages/i.m4a"><span class="tag">I &middot; Telugu</span><span class="txt" lang="te">నమస్కారం! మీరు ఎలా ఉన్నారు?</span><span class="bar"></span></button>
       <button class="clip" data-src="audio/speech/languages/j.m4a"><span class="tag">J &middot; Kannada</span><span class="txt" lang="kn">ನಮಸ್ಕಾರ! ಹೇಗಿದ್ದೀರಾ?</span><span class="bar"></span></button>
     </div>
-    <p class="ref">CS224S Lecture 3, slide 45: G2P error 0.535% for English and Czech vs 37.85% across 507 languages.</p>
   </section>
 
-  <section class="slide" id="phone" data-title="On a phone line">
-    <p class="kicker">Lesson 8 &middot; Telephony</p>
+  <section class="slide" id="phone" data-part="Delivery" data-title="On a phone line">
+    <p class="kicker">Delivery &middot; The phone channel</p>
     <h2>On a phone line</h2>
-    <p>Wideband speech is sampled at 16 kHz or more. A classic phone line samples at 8 kHz and passes only about 300 to 3400 Hz. The high frequencies that make "s" and "sh" crisp are cut off. The course notes that telephone speech roughly doubles speech-recognition error.</p>
+    <p>Wideband speech is sampled at 16 kHz or more. A classic phone line samples at 8 kHz and passes only about 300 to 3400 Hz. The high frequencies that make "s" and "sh" crisp are cut off. Telephone speech also roughly doubles speech-recognition error.</p>
     <p>Most Indian voice bots live on this narrow channel, so a voice has to stay clear on it. Clip B is clip A, band-limited and resampled to 8 kHz the way a phone line would.</p>
     <div class="narr">
       <button class="clip" data-src="audio/speech/phone/intro.m4a"><span class="tag">Bulbul explains</span><span class="bar"></span></button>
@@ -269,11 +262,10 @@
       <button class="clip" data-src="audio/speech/phone/a.m4a"><span class="tag">A &middot; Full band (24 kHz)</span><span class="txt" lang="hi">नमस्ते, मैं आपके बैंक से बोल रहा हूँ। आपकी अगली EMI 15 तारीख़ को है।</span><span class="bar"></span></button>
       <button class="clip" data-src="audio/speech/phone/a-phone.m4a"><span class="tag">B &middot; Phone line (8 kHz)</span><span class="txt" lang="hi">नमस्ते, मैं आपके बैंक से बोल रहा हूँ। आपकी अगली EMI 15 तारीख़ को है।</span><span class="bar"></span></button>
     </div>
-    <p class="ref">CS224S Lecture 4, slide 14: 16 kHz speech vs the 8 kHz telephone rate. Lecture 1, slide 29: telephone speech roughly doubles ASR error.</p>
   </section>
 
-  <section class="slide" id="streaming" data-title="Streaming: how small can a chunk be?">
-    <p class="kicker">Experiment &middot; Streaming TTS</p>
+  <section class="slide" id="streaming" data-part="Delivery" data-title="Streaming: how small can a chunk be?">
+    <p class="kicker">Delivery &middot; Streaming</p>
     <h2>Streaming: how small can a chunk be?</h2>
     <p>A voice agent wants to start speaking before the language model has finished writing. So it cuts the reply into chunks and sends each chunk to TTS as soon as it arrives. Smaller chunks mean the first sound comes sooner. I measured what else they change, with Kokoro-82M on a 67-second essay.</p>
     <p>The surprise: chunks smaller than a clause make the audio itself longer. The duration predictor decides how long each sound lasts from the phrase around it. Give it a lone fragment and it stretches that fragment like a whole sentence. Token by token, the essay took 331 seconds to say instead of 67.</p>
@@ -296,13 +288,13 @@
       <button class="clip" data-src="audio/speech/streaming/token.m4a"><span class="tag">D &middot; Token</span><span class="meta">33 chunks &middot; 41.7 s</span><span class="bar"></span></button>
     </div>
     <p class="txt" style="font-size:0.95rem">"In 1952, at Bell Labs, Dr. Davis and his colleagues built Audrey, a machine that recognised spoken digits from a single speaker."</p>
-    <p class="ref">CS224S Lecture 5, slides 105&ndash;106: FastSpeech's duration predictor. Measured on an RTX 4090 Laptop, synthetic token stream at 40 tokens/s.</p>
+    <p class="ref">Measured on an RTX 4090 Laptop, synthetic token stream at 40 tokens/s.</p>
   </section>
 
-  <section class="slide" id="limits" data-title="What TTS still cannot do">
-    <p class="kicker">Lesson 9 &middot; Limits</p>
+  <section class="slide" id="limits" data-part="Limits" data-title="What TTS still cannot do">
+    <p class="kicker">Limits &middot; Emotion and expression</p>
     <h2>What TTS still cannot do</h2>
-    <p>Modern TTS is natural but, as the course puts it, "not yet fully emotive". Bulbul V4 Flash, the fast model, has no laughter, whisper or emotion tags (those are promised for V4 Pro). It does not sing, cannot clone a voice, and has no SSML. Malayalam and Odia have no V4 voices yet.</p>
+    <p>Modern TTS sounds natural, but it is not yet fully emotive. Bulbul V4 Flash, the fast model, has no laughter, whisper or emotion tags (those are promised for V4 Pro). It does not sing, cannot clone a voice, and has no SSML. Malayalam and Odia have no V4 voices yet.</p>
     <p>Here is what happens when you type a laugh: the model reads it as a word.</p>
     <div class="narr">
       <button class="clip" data-src="audio/speech/limits/intro.m4a"><span class="tag">Bulbul explains</span><span class="bar"></span></button>
@@ -312,13 +304,12 @@
     <div class="clips">
       <button class="clip" data-src="audio/speech/limits/a.m4a"><span class="tag">A &middot; Typed laughter</span><span class="txt">Haha! That was so funny.</span><span class="bar"></span></button>
     </div>
-    <p class="ref">CS224S Lecture 1, slide 38: modern TTS is "not yet fully emotive"; voice cloning.</p>
   </section>
 
-  <section class="slide" id="end" data-title="That's all for now">
+  <section class="slide" id="end" data-part="End" data-title="That's all for now">
     <p class="kicker">The end, for now</p>
     <h2>That's all for now</h2>
-    <p>These slides cover the text-to-speech part of the course. Speech recognition, dialogue and turn-taking are next.</p>
+    <p>These slides cover text-to-speech. Speech recognition, dialogue and turn-taking are next.</p>
     <p>The clips were made once and are stored as small files with this page, so nothing here calls a TTS service when you press play.</p>
     <p><a href="./index.html">&larr; Back to all posts</a></p>
   </section>
@@ -371,7 +362,16 @@
   const count = document.getElementById('count');
   let index = 0;
 
-  slides.forEach((s, i) => jump.add(new Option((i + 1) + '. ' + s.dataset.title, String(i))));
+  // Group the menu by concept: reading the text, prosody, the voice, delivery.
+  let group = null;
+  slides.forEach((s, i) => {
+    if (!group || group.label !== s.dataset.part) {
+      group = document.createElement('optgroup');
+      group.label = s.dataset.part;
+      jump.appendChild(group);
+    }
+    group.appendChild(new Option(s.dataset.title, String(i)));
+  });
   deck.classList.add('js');
 
   function show(i, scroll) {

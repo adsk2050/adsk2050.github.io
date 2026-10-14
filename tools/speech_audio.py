@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -146,12 +147,22 @@ def cache_key(text: str, language: str, speaker: str, pace: float) -> str:
     return hashlib.sha256(json.dumps(body, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
 
-def encode(src: Path, dst: Path, *, phone: bool = False) -> None:
+def first_pause_end(src: Path, within: float = 1.6) -> float:
+    """End of the first pause in the opening seconds, in seconds; 0 if there is none."""
+    log = subprocess.run(
+        ["ffmpeg", "-hide_banner", "-i", str(src), "-t", str(within), "-af", "silencedetect=n=-35dB:d=0.12",
+         "-f", "null", "-"], capture_output=True, text=True, check=True,
+    ).stderr
+    ends = re.findall(r"silence_end: ([0-9.]+)", log)
+    return float(ends[0]) if ends else 0.0
+
+
+def encode(src: Path, dst: Path, *, phone: bool = False, start: float = 0.0) -> None:
     dst.parent.mkdir(parents=True, exist_ok=True)
     # A phone line: band-limit to 300-3400 Hz and resample to 8 kHz.
     af = ["-af", "highpass=f=300,lowpass=f=3400", "-ar", "8000"] if phone else []
     subprocess.run(
-        ["ffmpeg", "-loglevel", "error", "-y", "-i", str(src), "-ac", "1", *af,
+        ["ffmpeg", "-loglevel", "error", "-y", "-ss", f"{start:.3f}", "-i", str(src), "-ac", "1", *af,
          "-c:a", "aac", "-b:a", "24k" if phone else BITRATE, "-movflags", "+faststart", str(dst)],
         check=True,
     )
@@ -172,7 +183,9 @@ def build_lessons(cache: Path) -> None:
             if not wav.exists():
                 missing.append(f"{key}/{name}")
                 continue
-            encode(wav, OUT / key / f"{name}.m4a")
+            # Each intro opens with "Lesson N:"; the page is ordered by concept, so cut that off.
+            start = max(0.0, first_pause_end(wav) - 0.05) if name == "intro" else 0.0
+            encode(wav, OUT / key / f"{name}.m4a", start=start)
             if lesson.get("phone_line") and name == "a":
                 encode(wav, OUT / key / "a-phone.m4a", phone=True)
     if missing:
