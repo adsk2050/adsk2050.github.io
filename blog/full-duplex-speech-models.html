@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <meta name="description" content="How full-duplex speech models listen and talk at the same time: the problem with turn-based voice agents, speech tokens, Moshi and other architectures, inputs and outputs, training data, benchmarks and the metrics used to judge them.">
+    <link rel="stylesheet" href="../style.css" type="text/css">
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="../apple-touch-icon.png">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <title>Listening while talking: how full-duplex speech models work &middot; Anmol Deep</title>
+<style>
+  .deck {
+    --surface: var(--dkblue); --ink: var(--white);
+    --muted: color-mix(in srgb, var(--white) 62%, var(--dkblue));
+    --line: color-mix(in srgb, var(--white) 20%, var(--dkblue));
+    --accent: var(--aqua);
+    --user: #E8A84B; --agent: var(--aqua); --bad: #F07068; --ok: #5CC27F;
+    --sans: "IBM Plex Sans", Oxygen, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-family: var(--sans); font-size: 1rem; line-height: 1.55; color: var(--ink);
+    max-width: 920px;
+  }
+  @media (prefers-color-scheme: light) {
+    .deck { --user: #A86200; --bad: #C8352B; --ok: #2E8A4E; }
+  }
+  .deck button { font: inherit; color: inherit; cursor: pointer; }
+  .deck button:focus-visible, .deck select:focus-visible, .deck input:focus-visible { outline: 3px solid var(--magenta); outline-offset: 2px; }
+
+  /* Controls exist only when JS runs; without JS every slide shows, one after another. */
+  .controls { display: none; }
+  .deck.js .controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .deck.js .slide[hidden] { display: none; }
+  .navbtn { background: var(--surface); border: 2px solid var(--ink); border-radius: 8px; padding: 6px 14px; font-weight: 700; }
+  .navbtn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .count { font-family: var(--mono); font-size: 0.9rem; color: var(--muted); min-width: 4.5em; text-align: center; }
+  .jump { flex: 1 1 200px; min-width: 0; font: 600 0.95rem var(--sans); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
+  .keys { font-size: 0.8rem; color: var(--muted); width: 100%; margin: 0; }
+
+  .slide { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 22px 22px 18px; margin-bottom: 24px; }
+  .kicker { font-family: var(--mono); font-size: 0.82rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); margin: 0 0 6px; }
+  .slide h2 { font-size: 1.7rem; line-height: 1.2; margin: 0 0 14px; }
+  .slide h3 { font-size: 1.05rem; margin: 18px 0 8px; }
+  .slide p { max-width: 70ch; margin: 0 0 12px; }
+  .slide ul, .slide ol { max-width: 70ch; padding-left: 1.2em; margin: 0 0 12px; }
+  .slide li { margin-bottom: 4px; }
+  .slide code { font-family: var(--mono); font-size: 0.88em; }
+  .ref { font-size: 0.85rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; margin-top: 16px !important; }
+  .ref a { color: var(--muted); }
+  .listen { font-weight: 700; margin: 18px 0 8px !important; }
+  .note { font-size: 0.9rem; color: var(--muted); }
+
+  .stat { font-family: var(--mono); font-size: 0.82rem; border-collapse: collapse; margin: 6px 0 12px; width: 100%; }
+  .stat th, .stat td { border-bottom: 1px solid var(--line); padding: 5px 12px 5px 0; text-align: left; vertical-align: top; }
+  .stat th { color: var(--muted); font-weight: 600; }
+  .stat td.prose, .stat th.prose { font-family: var(--sans); font-size: 0.88rem; }
+  .stat-wrap { overflow-x: auto; }
+  .tag-solved { color: var(--ok); font-weight: 700; }
+  .tag-partly { color: var(--user); font-weight: 700; }
+  .tag-open { color: var(--bad); font-weight: 700; }
+
+  .seg { display: inline-flex; flex-wrap: wrap; border: 2px solid var(--ink); border-radius: 8px; overflow: hidden; margin: 0 0 10px; }
+  .seg button { font: 700 0.85rem var(--sans); padding: 7px 12px; border: 0; background: var(--surface); color: var(--ink); }
+  .seg button + button { border-left: 2px solid var(--ink); }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+  .row-label { font-size: 0.8rem; font-family: var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin: 6px 0 4px; }
+
+  .panel { background: var(--black); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin: 8px 0 14px; }
+  .narration { margin: 10px 0 0; padding: 10px 14px; border-left: 5px solid var(--accent); background: var(--surface); border-radius: 0 10px 10px 0; max-width: 82ch; font-size: 0.95rem; }
+
+  /* Timeline: two lanes per system, bars placed by time */
+  .tl { position: relative; --nw: 64px; }
+  .tl-lane { display: grid; grid-template-columns: var(--nw) 1fr; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .tl-name { font: 600 0.8rem var(--mono); color: var(--muted); text-align: right; }
+  .tl-track { position: relative; height: 34px; background: var(--surface); border-radius: 6px; overflow: hidden; }
+  .tl-bar { position: absolute; top: 4px; bottom: 4px; border-radius: 5px; font: 600 0.72rem/26px var(--sans); color: #fff; padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.25; transition: opacity 0.15s; }
+  .tl-bar.on { opacity: 1; }
+  .tl-bar.user { background: var(--user); }
+  .tl-bar.agent { background: var(--agent); color: var(--black); }
+  .tl-bar.bad { background: var(--bad); color: #fff; }
+  .tl-bar.quiet { background: transparent; border: 2px dashed var(--line); color: var(--muted); }
+  .tl-axis { display: grid; grid-template-columns: var(--nw) 1fr; gap: 8px; }
+  .tl-ticks { position: relative; height: 18px; font: 0.7rem var(--mono); color: var(--muted); }
+  .tl-ticks span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+  .tl-ticks span:first-child { transform: none; }
+  .tl-ticks span:last-child { transform: translateX(-100%); }
+  .tl-head { position: absolute; top: 0; bottom: 18px; width: 2px; background: var(--magenta); pointer-events: none; }
+  .tl-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 8px; }
+  .pill { display: inline-block; padding: 7px 16px; font-weight: 700; background: var(--accent); color: var(--black) !important; border: 2px solid var(--accent); border-radius: 999px; }
+  .verdict { font-weight: 700; }
+  .verdict.good { color: var(--ok); }
+  .verdict.badv { color: var(--bad); }
+
+  /* Latency budget */
+  .budget label { display: grid; grid-template-columns: minmax(150px, 220px) 1fr 70px; gap: 10px; align-items: center; font-size: 0.9rem; margin-bottom: 6px; }
+  .budget output { font-family: var(--mono); font-size: 0.85rem; text-align: right; }
+  .budget input[type=range] { width: 100%; accent-color: var(--accent); }
+  .stack { display: flex; height: 30px; border-radius: 6px; overflow: hidden; margin: 4px 0 2px; background: var(--surface); }
+  .stack div { height: 100%; font: 600 0.7rem/30px var(--mono); color: #fff; text-align: center; overflow: hidden; white-space: nowrap; }
+  .stack-total { font-family: var(--mono); font-size: 0.85rem; margin-bottom: 8px; }
+
+  /* Token grid */
+  .grid-wrap { overflow-x: auto; }
+  .tgrid { border-collapse: separate; border-spacing: 3px; font: 0.72rem var(--mono); }
+  .tgrid th { color: var(--muted); font-weight: 600; text-align: right; padding-right: 6px; white-space: nowrap; }
+  .tgrid thead th { text-align: center; padding: 0; }
+  .tgrid td { width: 46px; min-width: 46px; height: 24px; text-align: center; border-radius: 4px; background: var(--surface); color: var(--muted); }
+  .tgrid td.txt { background: color-mix(in srgb, var(--second) 22%, var(--surface)); color: var(--ink); }
+  .tgrid td.sem { background: color-mix(in srgb, var(--agent) 35%, var(--surface)); color: var(--ink); }
+  .tgrid td.ac { background: color-mix(in srgb, var(--agent) 16%, var(--surface)); color: var(--ink); }
+  .tgrid td.usem { background: color-mix(in srgb, var(--user) 35%, var(--surface)); color: var(--ink); }
+  .tgrid td.uac { background: color-mix(in srgb, var(--user) 16%, var(--surface)); color: var(--ink); }
+  .tgrid td.future { opacity: 0.18; }
+  .tgrid td.now { outline: 2px solid var(--magenta); outline-offset: -2px; }
+  .tgrid tr.sep td { height: 6px; background: transparent; }
+
+  /* Diagrams */
+  .diagram { width: 100%; height: auto; margin: 6px 0 12px; }
+  .diagram text { text-anchor: middle; fill: var(--ink); font-family: var(--sans); }
+  .diagram .d-small { font-size: 12px; }
+  .diagram .d-note { font-size: 11px; fill: var(--muted); }
+  .diagram .d-title { font-size: 14px; font-weight: 600; }
+  .diagram .d-box { fill: var(--black); stroke: var(--line); stroke-width: 1.5; }
+  .diagram .d-hot { fill: var(--black); stroke: var(--accent); stroke-width: 2; }
+  .diagram .d-line { fill: none; stroke: var(--ink); stroke-opacity: 0.5; stroke-width: 1.5; }
+  .diagram .d-user { fill: var(--user); }
+  .diagram .d-agent { fill: var(--agent); }
+  .diagram .d-arrowhead { fill: var(--ink); fill-opacity: 0.6; }
+  .diagram .d-start { text-anchor: start; }
+  .diagram .d-end { text-anchor: end; }
+  .diagram .d-bold { font-weight: 600; }
+  .diagram .d-faint { fill-opacity: 0.35; }
+  .diagram .d-fill2 { fill: var(--second); }
+  .diagram .d-muted { fill: var(--muted); }
+  .diagram .d-ubox { fill: var(--black); stroke: var(--user); stroke-width: 2; }
+  .diagram .d-abox { fill: var(--black); stroke: var(--agent); stroke-width: 2; }
+  .diagram .d-dash { stroke-dasharray: 5 4; }
+  .diagram .d-ok-zone { fill: var(--ok); fill-opacity: 0.15; }
+
+  @media (max-width: 600px) {
+    .slide { padding: 16px 14px 14px; }
+    .slide h2 { font-size: 1.4rem; }
+    .budget label { grid-template-columns: 1fr 60px; }
+    .budget label input { grid-column: 1 / -1; grid-row: 2; }
+    .tl { --nw: 48px; }
+  }
+</style>
+</head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZJ7X6BCWP4"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-ZJ7X6BCWP4');
+</script>
+<body>
+    <header class="site-header">
+        <a class="site-name" href="../index.html">Anmol Deep</a>
+        <nav aria-label="Main">
+            <a href="../projects.html">Projects</a>
+            <a href="../blog/index.html" aria-current="page">Blog</a>
+            <a href="../about.html">About</a>
+            <a href="../resume.html">Resume</a>
+        </nav>
+    </header>
+
+    <main class="post">
+        <header class="post-header">
+            <p class="post-meta"><a href="./index.html">&larr; All posts</a> &middot; <time datetime="2026-11-02">2 November 2026</time> &middot; Interactive</p>
+            <h1>Listening while talking: how full-duplex speech models work</h1>
+            <p>Most voice agents take turns like a walkie-talkie: wait for silence, transcribe, think, speak. Full-duplex speech models listen and speak at the same time, and decide for themselves when to talk, when to stop and when to say &ldquo;mm-hm&rdquo;. This post covers the whole field, one idea per slide: the problem, the architectures, what goes in and out, how they are trained, and how they are judged.</p>
+        </header>
+
+<div class="deck" id="deck">
+  <div class="controls">
+    <button class="navbtn" id="prev" aria-label="Previous slide">&larr; Prev</button>
+    <span class="count" id="count" aria-live="polite"></span>
+    <button class="navbtn" id="next" aria-label="Next slide">Next &rarr;</button>
+    <select class="jump" id="jump" aria-label="Go to slide"></select>
+    <p class="keys">Arrow keys move between slides. Some slides have small simulations: press their buttons.</p>
+  </div>
+
+  <section class="slide" id="start" data-part="Start" data-title="How this works">
+    <p class="kicker">Start here</p>
+    <h2>How this works</h2>
+    <p>The post is a deck of short slides in five parts: <strong>the problem</strong> (why turn-taking is hard), <strong>architecture</strong> (how one model listens and speaks at once), <strong>inputs and outputs</strong>, <strong>training</strong>, and <strong>judging</strong> (benchmarks and metrics). It ends with where the field stands in late 2026 and what to read first.</p>
+    <p>Three slides have small simulations: a timeline of who speaks when, a latency calculator, and a frame-by-frame view of the tokens inside Moshi. They are illustrations built from numbers in the papers, not recordings.</p>
+    <p>Every slide lists its sources at the bottom. Most of the field is on arXiv, and much of it is from 2025 and 2026, so many numbers are the authors&rsquo; own and not yet repeated by anyone else.</p>
+  </section>
+
+  <section class="slide" id="what" data-part="The problem" data-title="Half duplex and full duplex">
+    <p class="kicker">The problem &middot; Definitions</p>
+    <h2>Half duplex and full duplex</h2>
+    <p>The words come from telecoms. A <strong>half-duplex</strong> channel carries one direction at a time, like a walkie-talkie: you say &ldquo;over&rdquo; and wait. A <strong>full-duplex</strong> channel carries both directions at once, like a phone call.</p>
+    <p>Almost every voice agent in production is half-duplex inside, even when it runs on a full-duplex phone line. It waits for you to stop, then answers. A <strong>full-duplex speech model</strong> takes your audio in and puts its own audio out continuously, every few tens of milliseconds, whether anyone is talking or not. Silence, &ldquo;mm-hm&rdquo;, stopping mid-word and talking over each other are all just things it can output.</p>
+    <p>That matters because real conversation is not tidy turns:</p>
+    <ul>
+      <li><strong>Gaps are short.</strong> Across ten languages, the typical gap between one person stopping and the next starting is about 200 ms.</li>
+      <li><strong>Overlap is normal.</strong> Listeners say &ldquo;yeah&rdquo;, &ldquo;mm&rdquo;, &ldquo;haan&rdquo; while the other person talks. In the Switchboard phone corpus about one utterance in five is a backchannel like this.</li>
+      <li><strong>Pauses are ambiguous.</strong> A one-second silence can be the end of a turn, someone thinking, or someone talking to a person in the room.</li>
+    </ul>
+    <p>The field has several names: full-duplex spoken dialogue models, full-duplex speech language models, or just duplex models. Older work on the same question is called turn-taking modelling.</p>
+    <p class="ref">Sources: Stivers et al., <a href="https://www.pnas.org/doi/10.1073/pnas.0903616106">Universals and cultural variation in turn-taking</a>, PNAS 2009; Jurafsky et al., Switchboard dialogue act tagging (SWBD-DAMSL); Chen and Yu, <a href="https://arxiv.org/abs/2509.14515">survey of full-duplex spoken language models</a>, 2025.</p>
+  </section>
+
+  <section class="slide" id="timeline" data-part="The problem" data-title="Who speaks when: five situations">
+    <p class="kicker">The problem &middot; Simulation</p>
+    <h2>Who speaks when: five situations</h2>
+    <p>Pick a situation and a listener, then press play. The top lane is the caller. The bottom lane is the listener: a cascade with a silence timer, a full-duplex model, or a person.</p>
+    <div class="panel" id="tl">
+      <p class="row-label">Situation</p>
+      <div class="seg" id="tl-scen">
+        <button data-v="end" aria-pressed="true">Turn ends</button>
+        <button data-v="pause" aria-pressed="false">Thinking pause</button>
+        <button data-v="backchannel" aria-pressed="false">Backchannel</button>
+        <button data-v="interrupt" aria-pressed="false">Interruption</button>
+        <button data-v="side" aria-pressed="false">Talking to someone else</button>
+      </div>
+      <p class="row-label">Listener</p>
+      <div class="seg" id="tl-sys">
+        <button data-v="cascade" aria-pressed="true">Cascade (silence timer)</button>
+        <button data-v="duplex" aria-pressed="false">Full-duplex model (well trained)</button>
+        <button data-v="human" aria-pressed="false">Person</button>
+      </div>
+      <div class="tl">
+        <div class="tl-lane"><span class="tl-name">Caller</span><div class="tl-track" id="tl-user"></div></div>
+        <div class="tl-lane"><span class="tl-name">Listener</span><div class="tl-track" id="tl-agent"></div></div>
+        <div class="tl-axis"><span></span><div class="tl-ticks" id="tl-ticks"></div></div>
+        <div class="tl-head" id="tl-head"></div>
+      </div>
+      <div class="tl-controls">
+        <button class="pill" id="tl-play">&#9654; Play</button>
+        <span class="verdict" id="tl-verdict"></span>
+      </div>
+      <p class="narration" id="tl-text"></p>
+    </div>
+    <p class="note">Dashed bars are silence where something is happening inside the system. Red bars are mistakes.</p>
+    <p class="ref">Timings follow typical values from: Stivers et al. 2009 (human gaps); <a href="https://arxiv.org/abs/2410.00037">Moshi</a> (duplex latency); <a href="https://arxiv.org/abs/2609.17360">ECHO</a> (backchannel over-yielding); <a href="https://arxiv.org/abs/2507.23159">Full-Duplex-Bench v1.5</a> (talking to others); <a href="https://arxiv.org/abs/2610.17124">D2</a> (interruption success).</p>
+  </section>
+
+  <section class="slide" id="cascade" data-part="The problem" data-title="The cascade and its latency">
+    <p class="kicker">The problem &middot; The cascade</p>
+    <h2>The cascade and where its time goes</h2>
+    <p>The standard voice agent is a chain of four models: <strong>voice activity detection</strong> (VAD) finds speech, <strong>speech recognition</strong> (ASR) turns it into text, an <strong>LLM</strong> writes a reply, and <strong>text-to-speech</strong> (TTS) speaks it. It is modular, easy to debug and can use any text LLM. Its weak points are:</p>
+    <ul>
+      <li><strong>Latency adds up.</strong> Each stage waits for the one before.</li>
+      <li><strong>Everything but the words is lost.</strong> Tone, hesitation, laughter, who is speaking and background sound do not survive the trip through text.</li>
+      <li><strong>Turn-taking is a rule, not a skill.</strong> &ldquo;Reply after N ms of silence&rdquo; is either too eager or too slow.</li>
+    </ul>
+    <p>Move the sliders to build a cascade&rsquo;s budget, from the moment the caller stops to the first sound of the reply.</p>
+    <div class="panel budget" id="budget">
+      <label>End-of-turn wait (silence timer) <input type="range" id="b-endpoint" min="100" max="1200" step="50" value="600"><output id="o-endpoint"></output></label>
+      <label>ASR final transcript <input type="range" id="b-asr" min="30" max="500" step="10" value="150"><output id="o-asr"></output></label>
+      <label>LLM first token <input type="range" id="b-llm" min="100" max="1500" step="50" value="400"><output id="o-llm"></output></label>
+      <label>TTS first audio <input type="range" id="b-tts" min="40" max="600" step="10" value="150"><output id="o-tts"></output></label>
+      <label>Network and telephony <input type="range" id="b-net" min="0" max="400" step="10" value="100"><output id="o-net"></output></label>
+      <div class="stack" id="stack"></div>
+      <p class="stack-total" id="stack-total"></p>
+    </div>
+    <p>Production stacks fight this with tricks: a small learned turn detector instead of a fixed timer, starting the LLM before the turn is confirmed, streaming TTS in small chunks. These help, and they are why most shipped agents are still cascades. Full-duplex models attack the problem at the root: there is no pipeline to wait for.</p>
+    <p class="ref">Sources: <a href="https://arxiv.org/abs/2410.00037">Moshi</a> (160 ms theoretical, 200 ms practical); <a href="https://aclanthology.org/2025.iwsds-1.27">Castillo-L&oacute;pez et al. 2025</a> (deployed agents wait 700&ndash;1000 ms); <a href="https://github.com/pipecat-ai/smart-turn">Pipecat Smart Turn</a> and <a href="https://livekit.com/blog/using-a-transformer-to-improve-end-of-turn-detection">LiveKit turn detector</a> (learned end-of-turn).</p>
+  </section>
+
+  <section class="slide" id="tokens" data-part="Architecture" data-title="Speech as tokens">
+    <p class="kicker">Architecture &middot; Tokenisers</p>
+    <h2>Speech as tokens</h2>
+    <p>A language model predicts the next token. To make it predict speech, speech has to become tokens. A <strong>neural audio codec</strong> does this: an encoder squeezes a short slice of audio into a vector, and <strong>residual vector quantisation</strong> (RVQ) turns that vector into a few numbers from fixed codebooks. The first codebook captures the rough shape, and each next one encodes what the previous ones missed.</p>
+    <svg class="diagram" viewBox="0 0 720 220" role="img" aria-label="Audio goes through an encoder into frames of 80 ms, each holding one semantic token and seven acoustic tokens"><defs><marker id="ah1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="d-arrowhead"/></marker></defs><path d="M10,90 L16,106.6 L22,101.6 L28,71.9 L34,65.3 L40,95.9 L46,114.5 L52,96.4 L58,78.2 L64,79.1 L70,98.4 L76,114.3 L82,93.0 L88,64.1 L94,74.2 L100,103.6 L106,105.9 L112,88.8 L118,72.8 L124,80.5" class="d-line" style="stroke-opacity:0.9"/><text x="65" y="140" class="d-note">24 kHz audio</text><line x1="128" y1="90" x2="152" y2="90" class="d-line" marker-end="url(#ah1)"/><rect x="155" y="62" width="110" height="56" rx="8" class="d-box"/><text x="210" y="86" class="d-small d-bold">Encoder</text><text x="210" y="102" class="d-note">conv + transformer</text><line x1="268" y1="90" x2="292" y2="90" class="d-line" marker-end="url(#ah1)"/><rect x="300" y="30" width="24" height="12" rx="2" class="d-agent"/><rect x="300" y="45" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="300" y="60" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="300" y="75" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="300" y="90" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="300" y="105" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="300" y="120" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="300" y="135" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="330" y="30" width="24" height="12" rx="2" class="d-agent"/><rect x="330" y="45" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="330" y="60" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="330" y="75" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="330" y="90" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="330" y="105" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="330" y="120" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="330" y="135" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="360" y="30" width="24" height="12" rx="2" class="d-agent"/><rect x="360" y="45" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="360" y="60" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="360" y="75" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="360" y="90" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="360" y="105" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="360" y="120" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="360" y="135" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="390" y="30" width="24" height="12" rx="2" class="d-agent"/><rect x="390" y="45" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="390" y="60" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="390" y="75" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="390" y="90" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="390" y="105" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="390" y="120" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="390" y="135" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="420" y="30" width="24" height="12" rx="2" class="d-agent"/><rect x="420" y="45" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="420" y="60" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="420" y="75" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="420" y="90" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="420" y="105" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="420" y="120" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="420" y="135" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="450" y="30" width="24" height="12" rx="2" class="d-agent"/><rect x="450" y="45" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="450" y="60" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="450" y="75" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="450" y="90" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="450" y="105" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="450" y="120" width="24" height="12" rx="2" class="d-agent d-faint"/><rect x="450" y="135" width="24" height="12" rx="2" class="d-agent d-faint"/><line x1="300" y1="156" x2="324" y2="156" class="d-line"/><text x="312" y="170" class="d-note">80 ms</text><text x="490" y="40" class="d-small d-start">q1: semantic token</text><text x="490" y="56" class="d-note d-start">what is said (distilled from WavLM)</text><text x="490" y="110" class="d-small d-start">q2&#8211;q8: acoustic tokens</text><text x="490" y="126" class="d-note d-start">voice, tone, room; each level fixes</text><text x="490" y="140" class="d-note d-start">what the one before missed</text><text x="360" y="204" class="d-note">Mimi: 12.5 frames a second &#215; 8 tokens, each one of 2,048 options = 1.1 kbps. Its decoder turns tokens back into audio.</text></svg>
+    <p>There are two kinds of token. <strong>Semantic tokens</strong> keep what is said and drop who said it. <strong>Acoustic tokens</strong> keep everything needed to rebuild the sound. Duplex models need both: semantic tokens for the language model to reason over, acoustic tokens to sound like a person. SpeechTokenizer shows the split directly: its first layer alone keeps the words but loses the speaker; all eight keep both.</p>
+    <div class="stat-wrap"><table class="stat">
+      <thead><tr><th>Tokeniser</th><th>Kind</th><th>Frames / s</th><th>Codebooks</th><th class="prose">Used by</th></tr></thead>
+      <tbody>
+        <tr><td>HuBERT units</td><td>semantic</td><td>50</td><td>1 &times; 500</td><td class="prose">dGSLM, SyncLLM (25 Hz)</td></tr>
+        <tr><td>EnCodec</td><td>acoustic</td><td>75</td><td>up to 32 &times; 1024</td><td class="prose">many TTS models</td></tr>
+        <tr><td>SpeechTokenizer</td><td>both</td><td>50</td><td>8</td><td class="prose">first layer from HuBERT</td></tr>
+        <tr><td>Mimi</td><td>both</td><td>12.5</td><td>8 &times; 2048</td><td class="prose">Moshi, PersonaPlex, Human-1</td></tr>
+        <tr><td>GLM-4-Voice</td><td>semantic</td><td>12.5</td><td>1</td><td class="prose">GLM-4-Voice (175 bits/s)</td></tr>
+        <tr><td>CosyVoice 2</td><td>semantic</td><td>25</td><td>6,561 codes</td><td class="prose">MinMo, OmniFlatten-style models</td></tr>
+      </tbody>
+    </table></div>
+    <p><strong>Why 12.5 Hz matters.</strong> Fewer frames per second means shorter sequences, so a 7B model can run a step every 80 ms and hold minutes of conversation in context. Semantic-only tokens need a separate decoder to become sound, usually flow matching to a spectrogram and then a HiFi-GAN vocoder. Mimi has its own decoder.</p>
+    <p class="ref">Sources: <a href="https://arxiv.org/abs/2410.00037">Moshi/Mimi</a>; <a href="https://arxiv.org/abs/2106.07447">HuBERT</a>; <a href="https://arxiv.org/abs/2210.13438">EnCodec</a>; <a href="https://arxiv.org/abs/2107.03312">SoundStream</a>; <a href="https://arxiv.org/abs/2308.16692">SpeechTokenizer</a>; <a href="https://arxiv.org/abs/2412.02612">GLM-4-Voice</a>; <a href="https://arxiv.org/abs/2412.10117">CosyVoice 2</a>.</p>
+  </section>
+
+  <section class="slide" id="families" data-part="Architecture" data-title="Two families of design">
+    <p class="kicker">Architecture &middot; The big split</p>
+    <h2>Two families of design</h2>
+    <p>The first survey of the field sorts models into three classes: <strong>half-duplex</strong> (strict turns), <strong>pseudo-full-duplex</strong> (switches between listening and speaking very fast) and <strong>true full-duplex</strong> (listens and speaks in the same step). It then splits the duplex ones by where the decision to speak lives.</p>
+    <svg class="diagram" viewBox="0 0 720 230" role="img" aria-label="Engineered synchronisation uses a state head to decide when to speak; learned synchronisation runs one model over both streams every frame"><defs><marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="d-arrowhead"/></marker></defs><text x="175" y="20" class="d-title">Engineered synchronisation</text><rect x="5" y="45" width="95" height="44" rx="8" class="d-box"/><text x="52.5" y="63" class="d-small">Speech</text><text x="52.5" y="79" class="d-small">encoder</text><line x1="102" y1="67" x2="122" y2="67" class="d-line" marker-end="url(#ah2)"/><rect x="125" y="45" width="100" height="44" rx="8" class="d-hot"/><text x="175" y="71" class="d-small d-bold">Text LLM</text><line x1="227" y1="67" x2="247" y2="67" class="d-line" marker-end="url(#ah2)"/><rect x="250" y="45" width="95" height="44" rx="8" class="d-box"/><text x="297.5" y="63" class="d-small">Speech</text><text x="297.5" y="79" class="d-small">decoder</text><line x1="175" y1="91" x2="175" y2="118" class="d-line" marker-end="url(#ah2)"/><rect x="100" y="120" width="150" height="48" rx="8" class="d-box"/><text x="175" y="140" class="d-small d-bold">State head</text><text x="175" y="156" class="d-note">listen / speak / stop</text><text x="175" y="200" class="d-note">Freeze-Omni, MinMo, VITA, neural FSM</text><text x="175" y="216" class="d-note">keeps a strong text LLM; timing is a classifier</text><line x1="360" y1="10" x2="360" y2="220" class="d-line" style="stroke-opacity:0.2"/><text x="545" y="20" class="d-title">Learned synchronisation</text><rect x="375" y="42" width="110" height="36" rx="8" class="d-ubox"/><text x="430" y="64" class="d-small">Caller audio</text><rect x="375" y="96" width="110" height="36" rx="8" class="d-abox"/><text x="430" y="118" class="d-small">Own audio + text</text><line x1="487" y1="60" x2="520" y2="72" class="d-line" marker-end="url(#ah2)"/><line x1="487" y1="114" x2="520" y2="102" class="d-line" marker-end="url(#ah2)"/><rect x="522" y="42" width="92" height="92" rx="8" class="d-hot"/><text x="568" y="84" class="d-small d-bold">One model</text><text x="568" y="100" class="d-note">every frame</text><line x1="616" y1="88" x2="636" y2="88" class="d-line" marker-end="url(#ah2)"/><rect x="638" y="70" width="78" height="36" rx="8" class="d-abox"/><text x="677" y="92" class="d-small">Next frame</text><path d="M677,108 V150 H430 V136" class="d-line" stroke-dasharray="4 4" marker-end="url(#ah2)"/><text x="555" y="166" class="d-note">its own output is fed back in</text><text x="545" y="200" class="d-note">dGSLM, Moshi, SyncLLM, OmniFlatten, PersonaPlex</text><text x="545" y="216" class="d-note">timing learned from data; no explicit turns</text></svg>
+    <ul>
+      <li><strong>Engineered synchronisation.</strong> Keep a turn-based speech LLM and add a small controller that decides, every chunk, whether to listen, speak or stop. Freeze-Omni&rsquo;s head predicts three states per chunk: keep listening, the user is done so answer, or the user is done but do not interrupt. MinMo&rsquo;s duplex predictor is one transformer layer on the LLM&rsquo;s hidden states. VITA runs two copies of the model: one answers, one listens. The upside: the text LLM keeps its knowledge.</li>
+      <li><strong>Learned synchronisation.</strong> One model sees both streams and outputs its own stream every frame. There is no &ldquo;turn&rdquo; anywhere in the code. Silence is just a run of silence tokens. Timing, overlap and backchannels come from the training data.</li>
+    </ul>
+    <p>Many models that sound duplex in demos are half-duplex in their papers: Qwen2.5-Omni, Qwen3-Omni, GLM-4-Voice, Mini-Omni and LLaMA-Omni all take turns. They are often the starting point that duplex work converts.</p>
+    <p class="ref">Sources: Chen and Yu, <a href="https://arxiv.org/abs/2509.14515">survey</a>; <a href="https://arxiv.org/abs/2411.00774">Freeze-Omni</a>; <a href="https://arxiv.org/abs/2501.06282">MinMo</a>; <a href="https://arxiv.org/abs/2408.05211">VITA</a>.</p>
+  </section>
+
+  <section class="slide" id="moshi" data-part="Architecture" data-title="Moshi, piece by piece">
+    <p class="kicker">Architecture &middot; The reference design</p>
+    <h2>Moshi, piece by piece</h2>
+    <p>Moshi (Kyutai, September 2024) is the open model most duplex work builds on. Every 80 ms it takes one frame of the caller&rsquo;s audio and produces one frame of its own.</p>
+    <svg class="diagram" viewBox="0 0 720 262" role="img" aria-label="Moshi architecture: Mimi encoder, Temporal Transformer, Depth Transformer, Mimi decoder"><defs><marker id="ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="d-arrowhead"/></marker></defs><rect x="10" y="40" width="125" height="40" rx="8" class="d-ubox"/><text x="72.5" y="64" class="d-small">Caller speech</text><line x1="72" y1="82" x2="72" y2="108" class="d-line" marker-end="url(#ah3)"/><rect x="10" y="110" width="125" height="44" rx="8" class="d-box"/><text x="72.5" y="128" class="d-small d-bold">Mimi encoder</text><text x="72.5" y="144" class="d-note">8 tokens / 80 ms</text><line x1="137" y1="132" x2="178" y2="92" class="d-line" marker-end="url(#ah3)"/><rect x="180" y="40" width="250" height="80" rx="8" class="d-hot"/><text x="305" y="68" class="d-small d-bold">Temporal Transformer</text><text x="305" y="84" class="d-note">7B, initialised from Helium</text><text x="305" y="100" class="d-note">reads all 17 streams of past frames</text><line x1="305" y1="122" x2="305" y2="150" class="d-line" marker-end="url(#ah3)"/><text x="350" y="140" class="d-note">context vector</text><rect x="180" y="152" width="250" height="60" rx="8" class="d-hot"/><text x="305" y="170" class="d-small d-bold">Depth Transformer</text><text x="305" y="186" class="d-note">6 layers, small</text><text x="305" y="202" class="d-note">text token, then 8 audio tokens, in turn</text><line x1="432" y1="168" x2="470" y2="64" class="d-line" marker-end="url(#ah3)"/><line x1="432" y1="186" x2="470" y2="120" class="d-line" marker-end="url(#ah3)"/><rect x="472" y="42" width="240" height="40" rx="8" class="d-abox"/><text x="592" y="66" class="d-small">Text token (inner monologue)</text><rect x="472" y="100" width="240" height="40" rx="8" class="d-abox"/><text x="592" y="124" class="d-small">8 audio tokens (Moshi&#8217;s voice)</text><line x1="592" y1="142" x2="592" y2="162" class="d-line" marker-end="url(#ah3)"/><rect x="472" y="164" width="240" height="36" rx="8" class="d-box"/><text x="592" y="186" class="d-small d-bold">Mimi decoder</text><line x1="592" y1="202" x2="592" y2="220" class="d-line" marker-end="url(#ah3)"/><rect x="472" y="222" width="240" height="36" rx="8" class="d-abox"/><text x="592" y="244" class="d-small">Moshi speech, 24 kHz</text><path d="M592,42 V14 H305 V38" class="d-line" stroke-dasharray="4 4" marker-end="url(#ah3)"/><text x="450" y="28" class="d-note">fed back as input for the next frame</text></svg>
+    <ul>
+      <li><strong>Mimi</strong> turns 24 kHz audio into 8 tokens per 80 ms frame, and back.</li>
+      <li><strong>17 streams per frame</strong>: 1 text token, 8 audio tokens for Moshi, 8 for the caller.</li>
+      <li><strong>RQ-Transformer.</strong> Predicting 17 &times; thousands of steps with one big model would be too slow. So a big <em>Temporal Transformer</em> (7B, starting from the Helium text LLM) moves through time, one step per frame. A small <em>Depth Transformer</em> (6 layers) then fills in the tokens inside that frame, one after another.</li>
+      <li><strong>Inner monologue.</strong> Before its audio tokens, Moshi predicts a text token for the same moment: the word it is about to say. This lets the text LLM&rsquo;s knowledge steer the speech. Text is sparser than audio, so about 65% of text slots are a <code>PAD</code> token.</li>
+      <li><strong>Acoustic delay.</strong> The acoustic tokens trail the semantic token by one frame, so the model knows what it is saying before it decides how it sounds.</li>
+    </ul>
+    <p><strong>Latency:</strong> one 80 ms frame plus the 80 ms acoustic delay gives 160 ms in theory. Kyutai reports about 200 ms in practice.</p>
+    <p class="ref">Source: D&eacute;fossez et al., <a href="https://arxiv.org/abs/2410.00037">Moshi: a speech-text foundation model for real-time dialogue</a>, 2024; <a href="https://github.com/kyutai-labs/moshi">code and weights</a>.</p>
+  </section>
+
+  <section class="slide" id="frames" data-part="Architecture" data-title="Inside Moshi, frame by frame">
+    <p class="kicker">Architecture &middot; Simulation</p>
+    <h2>Inside Moshi, frame by frame</h2>
+    <p>Each column is one 80 ms frame. Step through it. At every frame the model writes the top three rows (its text, its semantic token, its acoustic tokens). The bottom two rows are the caller, coming in from the microphone. Here Moshi says &ldquo;Hi there, how can I help&rdquo; while the caller says a short &ldquo;hello?&rdquo; over it.</p>
+    <div class="panel">
+      <div class="tl-controls" style="margin:0 0 10px">
+        <button class="navbtn" id="tg-prev">&larr; Frame</button>
+        <button class="navbtn" id="tg-next">Frame &rarr;</button>
+        <label class="note"><input type="checkbox" id="tg-delay" checked> Acoustic delay (1 frame)</label>
+        <span class="count" id="tg-step"></span>
+      </div>
+      <div class="grid-wrap"><table class="tgrid" id="tgrid"></table></div>
+    </div>
+    <p class="note">&middot; is a <code>PAD</code> text token. &ldquo;sil&rdquo; is a codec token for silence: silence is coded like any other sound. &ldquo;&times;7&rdquo; stands for the seven acoustic tokens.</p>
+    <p>Notice three things. Moshi&rsquo;s text runs slightly <em>ahead</em> of its audio. Its acoustic row lags its semantic row by one frame. And the caller&rsquo;s rows are never empty: Moshi hears the caller even while it talks, which is what lets it stop, carry on or backchannel.</p>
+  </section>
+
+  <section class="slide" id="others" data-part="Architecture" data-title="Other ways to mix two speakers">
+    <p class="kicker">Architecture &middot; Variants</p>
+    <h2>Other ways to mix two speakers</h2>
+    <p>The core question is how to fit two people talking at once into a model that reads one sequence.</p>
+    <svg class="diagram" viewBox="0 0 720 232" role="img" aria-label="Three ways to arrange two speakers in a token sequence"><text x="10" y="32" class="d-small d-start d-bold">Parallel streams</text><text x="10" y="48" class="d-note d-start">dGSLM, Moshi: one row each</text><rect x="230" y="20" width="22" height="14" rx="2" class="d-user d-faint"/><rect x="230" y="40" width="22" height="14" rx="2" class="d-agent"/><rect x="256" y="20" width="22" height="14" rx="2" class="d-user d-faint"/><rect x="256" y="40" width="22" height="14" rx="2" class="d-agent"/><rect x="282" y="20" width="22" height="14" rx="2" class="d-user d-faint"/><rect x="282" y="40" width="22" height="14" rx="2" class="d-agent"/><rect x="308" y="20" width="22" height="14" rx="2" class="d-user d-faint"/><rect x="308" y="40" width="22" height="14" rx="2" class="d-agent"/><rect x="334" y="20" width="22" height="14" rx="2" class="d-user d-faint"/><rect x="334" y="40" width="22" height="14" rx="2" class="d-agent"/><rect x="360" y="20" width="22" height="14" rx="2" class="d-user"/><rect x="360" y="40" width="22" height="14" rx="2" class="d-agent"/><rect x="386" y="20" width="22" height="14" rx="2" class="d-user"/><rect x="386" y="40" width="22" height="14" rx="2" class="d-agent d-faint"/><rect x="412" y="20" width="22" height="14" rx="2" class="d-user"/><rect x="412" y="40" width="22" height="14" rx="2" class="d-agent d-faint"/><rect x="438" y="20" width="22" height="14" rx="2" class="d-user"/><rect x="438" y="40" width="22" height="14" rx="2" class="d-agent d-faint"/><rect x="464" y="20" width="22" height="14" rx="2" class="d-user"/><rect x="464" y="40" width="22" height="14" rx="2" class="d-agent d-faint"/><rect x="490" y="20" width="22" height="14" rx="2" class="d-user d-faint"/><rect x="490" y="40" width="22" height="14" rx="2" class="d-agent d-faint"/><rect x="516" y="20" width="22" height="14" rx="2" class="d-user d-faint"/><rect x="516" y="40" width="22" height="14" rx="2" class="d-agent"/><rect x="542" y="20" width="22" height="14" rx="2" class="d-user d-faint"/><rect x="542" y="40" width="22" height="14" rx="2" class="d-agent"/><rect x="568" y="20" width="22" height="14" rx="2" class="d-user d-faint"/><rect x="568" y="40" width="22" height="14" rx="2" class="d-agent"/><rect x="594" y="20" width="22" height="14" rx="2" class="d-user d-faint"/><rect x="594" y="40" width="22" height="14" rx="2" class="d-agent"/><rect x="620" y="20" width="22" height="14" rx="2" class="d-user d-faint"/><rect x="620" y="40" width="22" height="14" rx="2" class="d-agent"/><rect x="646" y="20" width="22" height="14" rx="2" class="d-user d-faint"/><rect x="646" y="40" width="22" height="14" rx="2" class="d-agent"/><rect x="672" y="20" width="22" height="14" rx="2" class="d-user d-faint"/><rect x="672" y="40" width="22" height="14" rx="2" class="d-agent"/><text x="10" y="102" class="d-small d-start d-bold">Time-chunk interleaving</text><text x="10" y="118" class="d-note d-start">SyncLLM: a speaker tag per chunk</text><text x="241" y="111" class="d-note">S0</text><rect x="254" y="100" width="22" height="14" rx="2" class="d-agent"/><rect x="278" y="100" width="22" height="14" rx="2" class="d-agent"/><text x="313" y="111" class="d-note">S1</text><rect x="326" y="100" width="22" height="14" rx="2" class="d-user"/><rect x="350" y="100" width="22" height="14" rx="2" class="d-user"/><text x="385" y="111" class="d-note">S0</text><rect x="398" y="100" width="22" height="14" rx="2" class="d-agent"/><rect x="422" y="100" width="22" height="14" rx="2" class="d-agent"/><text x="457" y="111" class="d-note">S1</text><rect x="470" y="100" width="22" height="14" rx="2" class="d-user"/><rect x="494" y="100" width="22" height="14" rx="2" class="d-user"/><text x="529" y="111" class="d-note">S0</text><rect x="542" y="100" width="22" height="14" rx="2" class="d-agent"/><rect x="566" y="100" width="22" height="14" rx="2" class="d-agent"/><text x="601" y="111" class="d-note">S1</text><rect x="614" y="100" width="22" height="14" rx="2" class="d-user"/><rect x="638" y="100" width="22" height="14" rx="2" class="d-user"/><text x="10" y="172" class="d-small d-start d-bold">Flattened chunks</text><text x="10" y="188" class="d-note d-start">OmniFlatten: one sequence, plain GPT</text><rect x="230" y="160" width="10" height="14" rx="2" class="d-user"/><rect x="242" y="160" width="10" height="14" rx="2" class="d-user"/><rect x="254" y="160" width="10" height="14" rx="2" class="d-user"/><rect x="266" y="160" width="10" height="14" rx="2" class="d-user"/><rect x="278" y="160" width="10" height="14" rx="2" class="d-user"/><rect x="290" y="160" width="10" height="14" rx="2" class="d-fill2"/><rect x="302" y="160" width="10" height="14" rx="2" class="d-fill2"/><rect x="314" y="160" width="10" height="14" rx="2" class="d-agent"/><rect x="326" y="160" width="10" height="14" rx="2" class="d-agent"/><rect x="338" y="160" width="10" height="14" rx="2" class="d-agent"/><rect x="350" y="160" width="10" height="14" rx="2" class="d-agent"/><rect x="362" y="160" width="10" height="14" rx="2" class="d-agent"/><rect x="382" y="160" width="10" height="14" rx="2" class="d-user"/><rect x="394" y="160" width="10" height="14" rx="2" class="d-user"/><rect x="406" y="160" width="10" height="14" rx="2" class="d-user"/><rect x="418" y="160" width="10" height="14" rx="2" class="d-user"/><rect x="430" y="160" width="10" height="14" rx="2" class="d-user"/><rect x="442" y="160" width="10" height="14" rx="2" class="d-fill2"/><rect x="454" y="160" width="10" height="14" rx="2" class="d-fill2"/><rect x="466" y="160" width="10" height="14" rx="2" class="d-agent"/><rect x="478" y="160" width="10" height="14" rx="2" class="d-agent"/><rect x="490" y="160" width="10" height="14" rx="2" class="d-agent"/><rect x="502" y="160" width="10" height="14" rx="2" class="d-agent"/><rect x="514" y="160" width="10" height="14" rx="2" class="d-agent"/><rect x="534" y="160" width="10" height="14" rx="2" class="d-user"/><rect x="546" y="160" width="10" height="14" rx="2" class="d-user"/><rect x="558" y="160" width="10" height="14" rx="2" class="d-user"/><rect x="570" y="160" width="10" height="14" rx="2" class="d-user"/><rect x="582" y="160" width="10" height="14" rx="2" class="d-user"/><rect x="594" y="160" width="10" height="14" rx="2" class="d-fill2"/><rect x="606" y="160" width="10" height="14" rx="2" class="d-fill2"/><rect x="618" y="160" width="10" height="14" rx="2" class="d-agent"/><rect x="630" y="160" width="10" height="14" rx="2" class="d-agent"/><rect x="642" y="160" width="10" height="14" rx="2" class="d-agent"/><rect x="654" y="160" width="10" height="14" rx="2" class="d-agent"/><rect x="666" y="160" width="10" height="14" rx="2" class="d-agent"/><rect x="230" y="212" width="12" height="12" rx="2" class="d-user"/><text x="248" y="222" class="d-note d-start">caller speech</text><rect x="345" y="212" width="12" height="12" rx="2" class="d-agent"/><text x="363" y="222" class="d-note d-start">model speech</text><rect x="460" y="212" width="12" height="12" rx="2" class="d-fill2"/><text x="478" y="222" class="d-note d-start">model text</text><text x="575" y="222" class="d-note d-start">faded = silence</text></svg>
+    <div class="stat-wrap"><table class="stat">
+      <thead><tr><th>Model</th><th class="prose">How it handles two speakers</th></tr></thead>
+      <tbody>
+        <tr><td>dGSLM (2022)</td><td class="prose">Two transformer towers with shared weights, one per channel, joined by cross-attention. No text at all, so the timing was natural and the words were babble.</td></tr>
+        <tr><td>SyncLLM (2024)</td><td class="prose">Llama 3 8B with HuBERT tokens. Speakers alternate in 160&ndash;240 ms chunks, each with a speaker tag that works as a clock. It predicts the caller&rsquo;s next chunk too, which hides up to 240 ms of network lag.</td></tr>
+        <tr><td>OmniFlatten (2024)</td><td class="prose">Cuts all streams into small chunks and flattens them into one sequence for an unchanged 0.5B GPT. Trained in stages, dropping the text streams one by one.</td></tr>
+        <tr><td>LSLM (2024)</td><td class="prose">Adds a listening channel to a speaking model. Tested merging it at the input, in every layer, or at the output; merging in every layer worked best.</td></tr>
+        <tr><td>SALMONN-omni (2024)</td><td class="prose">No audio tokens at all: continuous embeddings in and out, with explicit &lt;start_speak&gt; and &lt;end_speak&gt; tokens. Hears its own voice, so it handles echo.</td></tr>
+        <tr><td>PersonaPlex (2026)</td><td class="prose">Moshi&rsquo;s design, plus a prompt: a voice sample on the agent&rsquo;s audio channel and a role description on its text channel.</td></tr>
+      </tbody>
+    </table></div>
+    <p class="ref">Sources: <a href="https://arxiv.org/abs/2203.16502">dGSLM</a>; <a href="https://arxiv.org/abs/2409.15594">SyncLLM</a>; <a href="https://arxiv.org/abs/2410.17799">OmniFlatten</a>; <a href="https://arxiv.org/abs/2408.02622">LSLM</a>; <a href="https://arxiv.org/abs/2411.18138">SALMONN-omni</a>; <a href="https://arxiv.org/abs/2602.06053">PersonaPlex</a>.</p>
+  </section>
+
+  <section class="slide" id="io" data-part="Inputs and outputs" data-title="What goes in, what comes out">
+    <p class="kicker">Inputs and outputs</p>
+    <h2>What goes in, what comes out</h2>
+    <svg class="diagram" viewBox="0 0 720 220" role="img" aria-label="Inputs and outputs of a duplex speech model"><defs><marker id="ah4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="d-arrowhead"/></marker></defs><rect x="5" y="12" width="245" height="32" rx="8" class="d-ubox"/><text x="127.5" y="32" class="d-small">Caller audio, continuous</text><line x1="252" y1="28" x2="298" y2="110" class="d-line" marker-end="url(#ah4)"/><rect x="5" y="53" width="245" height="32" rx="8" class="d-abox"/><text x="127.5" y="73" class="d-small">Its own audio and text so far</text><line x1="252" y1="69" x2="298" y2="110" class="d-line" marker-end="url(#ah4)"/><rect x="5" y="94" width="245" height="32" rx="8" class="d-box"/><text x="127.5" y="114" class="d-small">Text prompt: role, task</text><line x1="252" y1="110" x2="298" y2="110" class="d-line" marker-end="url(#ah4)"/><rect x="5" y="135" width="245" height="32" rx="8" class="d-box"/><text x="127.5" y="155" class="d-small">Voice prompt: seconds of audio</text><line x1="252" y1="151" x2="298" y2="110" class="d-line" marker-end="url(#ah4)"/><rect x="5" y="176" width="245" height="32" rx="8" class="d-box"/><text x="127.5" y="196" class="d-small">Images or video (omni models)</text><line x1="252" y1="192" x2="298" y2="110" class="d-line" marker-end="url(#ah4)"/><rect x="300" y="70" width="120" height="80" rx="8" class="d-hot"/><text x="360" y="98" class="d-small d-bold">Duplex</text><text x="360" y="114" class="d-small d-bold">speech model</text><text x="360" y="130" class="d-note">one step per frame</text><line x1="422" y1="110" x2="468" y2="28" class="d-line" marker-end="url(#ah4)"/><rect x="470" y="12" width="245" height="32" rx="8" class="d-abox"/><text x="592.5" y="32" class="d-small">Audio tokens &#8594; speech</text><line x1="422" y1="110" x2="468" y2="69" class="d-line" marker-end="url(#ah4)"/><rect x="470" y="53" width="245" height="32" rx="8" class="d-abox"/><text x="592.5" y="73" class="d-small">Text tokens (inner monologue)</text><line x1="422" y1="110" x2="468" y2="110" class="d-line" marker-end="url(#ah4)"/><rect x="470" y="94" width="245" height="32" rx="8" class="d-box"/><text x="592.5" y="114" class="d-small">Silence and pad tokens</text><line x1="422" y1="110" x2="468" y2="151" class="d-line" marker-end="url(#ah4)"/><rect x="470" y="135" width="245" height="32" rx="8" class="d-box"/><text x="592.5" y="155" class="d-small">State tokens: listen, speak, stop</text><line x1="422" y1="110" x2="468" y2="192" class="d-line" marker-end="url(#ah4)"/><rect x="470" y="176" width="245" height="32" rx="8" class="d-box"/><text x="592.5" y="196" class="d-small">Tool calls (2026 models)</text></svg>
+    <ul>
+      <li><strong>The caller&rsquo;s audio</strong> streams in without a break, silence included.</li>
+      <li><strong>Its own output</strong> goes back in, so the model knows what it has said and whether it is mid-sentence.</li>
+      <li><strong>Prompts.</strong> PersonaPlex puts a few seconds of a voice on the agent&rsquo;s audio channel (to clone it) and a role description on the text channel, before the call starts. Omni models like Qwen3-Omni also take images and video.</li>
+      <li><strong>Outputs</strong> are audio tokens for the decoder, text tokens (the inner monologue, mostly padding), and in engineered designs, state tokens. 2026 models add tool calls as a separate output stream.</li>
+    </ul>
+    <div class="stat-wrap"><table class="stat">
+      <thead><tr><th>Model</th><th class="prose">In</th><th class="prose">Out</th><th>Duplex</th></tr></thead>
+      <tbody>
+        <tr><td>Moshi</td><td class="prose">caller audio, own audio and text</td><td class="prose">text + 8 Mimi tokens per frame</td><td>full, learned</td></tr>
+        <tr><td>PersonaPlex</td><td class="prose">as Moshi + voice prompt + role text</td><td class="prose">as Moshi</td><td>full, learned</td></tr>
+        <tr><td>SyncLLM</td><td class="prose">HuBERT chunks, both speakers</td><td class="prose">own chunk + guess of caller&rsquo;s</td><td>full, learned</td></tr>
+        <tr><td>Freeze-Omni</td><td class="prose">speech features</td><td class="prose">text + codec tokens + state 0/1/2</td><td>engineered</td></tr>
+        <tr><td>MinMo</td><td class="prose">speech features</td><td class="prose">text + speech tokens + speak-or-not</td><td>engineered</td></tr>
+        <tr><td>Qwen3-Omni</td><td class="prose">text, audio, images, video</td><td class="prose">text + multi-codebook speech</td><td>half (turns)</td></tr>
+        <tr><td>NemotronLabs VoiceChat</td><td class="prose">caller audio</td><td class="prose">speech + agent text + tool calls</td><td>full, learned</td></tr>
+      </tbody>
+    </table></div>
+    <p class="ref">Sources: <a href="https://arxiv.org/abs/2410.00037">Moshi</a>; <a href="https://arxiv.org/abs/2602.06053">PersonaPlex</a>; <a href="https://arxiv.org/abs/2409.15594">SyncLLM</a>; <a href="https://arxiv.org/abs/2411.00774">Freeze-Omni</a>; <a href="https://arxiv.org/abs/2501.06282">MinMo</a>; <a href="https://arxiv.org/abs/2509.17765">Qwen3-Omni</a>; <a href="https://arxiv.org/abs/2609.21967">NemotronLabs VoiceChat</a>.</p>
+  </section>
+
+  <section class="slide" id="recipe" data-part="Training" data-title="The training recipe">
+    <p class="kicker">Training &middot; Stages</p>
+    <h2>The training recipe</h2>
+    <p>Real two-person conversation with each voice on its own channel is rare. So training starts from cheap, plentiful data and moves step by step toward the scarce data that teaches timing.</p>
+    <svg class="diagram" viewBox="0 0 720 150" role="img" aria-label="Training stages from text model to timing rewards"><defs><marker id="ah5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="d-arrowhead"/></marker></defs><rect x="4" y="20" width="104" height="84" rx="8" class="d-hot"/><text x="56" y="14" class="d-note">1</text><text x="56" y="50" class="d-small d-bold">Text LM</text><text x="56" y="70" class="d-note">Helium 7B</text><text x="56" y="86" class="d-note">2.1T text tokens</text><line x1="109" y1="62" x2="122" y2="62" class="d-line" marker-end="url(#ah5)"/><rect x="123" y="20" width="104" height="84" rx="8" class="d-hot"/><text x="175" y="14" class="d-note">2</text><text x="175" y="50" class="d-small d-bold">Audio pretrain</text><text x="175" y="70" class="d-note">7M hours</text><text x="175" y="86" class="d-note">one stream</text><line x1="228" y1="62" x2="241" y2="62" class="d-line" marker-end="url(#ah5)"/><rect x="242" y="20" width="104" height="84" rx="8" class="d-hot"/><text x="294" y="14" class="d-note">3</text><text x="294" y="50" class="d-small d-bold">Two streams</text><text x="294" y="70" class="d-note">diarised audio</text><text x="294" y="86" class="d-note">split in two</text><line x1="347" y1="62" x2="360" y2="62" class="d-line" marker-end="url(#ah5)"/><rect x="361" y="20" width="104" height="84" rx="8" class="d-hot"/><text x="413" y="14" class="d-note">4</text><text x="413" y="50" class="d-small d-bold">Real calls</text><text x="413" y="70" class="d-note">Fisher, 2,000 h</text><text x="413" y="86" class="d-note">two channels</text><line x1="466" y1="62" x2="479" y2="62" class="d-line" marker-end="url(#ah5)"/><rect x="480" y="20" width="104" height="84" rx="8" class="d-hot"/><text x="532" y="14" class="d-note">5</text><text x="532" y="50" class="d-small d-bold">Instructions</text><text x="532" y="70" class="d-note">20k+ h of</text><text x="532" y="86" class="d-note">synthetic dialogue</text><line x1="585" y1="62" x2="598" y2="62" class="d-line" marker-end="url(#ah5)"/><rect x="599" y="20" width="104" height="84" rx="8" class="d-box d-dash"/><text x="651" y="14" class="d-note">6</text><text x="651" y="50" class="d-small d-bold">Timing rewards</text><text x="651" y="70" class="d-note">RL, 2026</text><text x="651" y="86" class="d-note">speak / wait / yield</text><text x="360" y="132" class="d-note">Stages 1&#8211;5 are Moshi&#8217;s recipe. Stage 6 is the 2026 addition from later papers.</text></svg>
+    <ol>
+      <li><strong>Text LM.</strong> Moshi starts from Helium, a 7B text model trained on 2.1 trillion tokens. This is where its knowledge comes from.</li>
+      <li><strong>Audio pretraining.</strong> About 7 million hours of speech, transcribed by Whisper to make the aligned text stream. One stream only: the model learns to talk, not to converse.</li>
+      <li><strong>Simulated two streams.</strong> Speakers are separated by diarisation. One, picked at random, becomes &ldquo;Moshi&rdquo;; everyone else becomes &ldquo;the caller&rdquo;.</li>
+      <li><strong>Real calls.</strong> Fisher: 2,000 hours of phone calls, each side on its own channel. Here the model learns real gaps, overlaps and backchannels. The 8 kHz phone audio is upsampled to 24 kHz first.</li>
+      <li><strong>Instructions.</strong> Over 20,000 hours of synthetic dialogue: Helium writes the conversations, a two-speaker TTS voices them with one consistent voice for Moshi, and noise and reverb are added to the caller&rsquo;s side.</li>
+      <li><strong>Timing rewards</strong> (2026, later papers). Reinforcement learning on when to speak, wait, backchannel or yield. See the slide after next.</li>
+    </ol>
+    <p>Other models follow the same shape. SyncLLM goes from turn-based synthetic speech, to duplex format with no overlap, to Fisher. OmniFlatten goes from speech recognition and TTS, to half-duplex, to full-duplex, removing the text streams one at a time.</p>
+    <p class="ref">Sources: <a href="https://arxiv.org/abs/2410.00037">Moshi</a>, section 4; <a href="https://arxiv.org/abs/2409.15594">SyncLLM</a>; <a href="https://arxiv.org/abs/2410.17799">OmniFlatten</a>.</p>
+  </section>
+
+  <section class="slide" id="data" data-part="Training" data-title="Where the conversation data comes from">
+    <p class="kicker">Training &middot; Data</p>
+    <h2>Where the conversation data comes from</h2>
+    <p>Hours of audio in each source, on a log scale. Real two-channel conversation (orange) is a thin slice of what models train on.</p>
+    <svg class="diagram" viewBox="0 0 720 304" role="img" aria-label="Hours of training data on a log scale"><line x1="240" y1="22" x2="240" y2="264" class="d-line" style="stroke-opacity:0.15"/><text x="240" y="16" class="d-note">100 h</text><line x1="318" y1="22" x2="318" y2="264" class="d-line" style="stroke-opacity:0.15"/><text x="318" y="16" class="d-note">1k</text><line x1="396" y1="22" x2="396" y2="264" class="d-line" style="stroke-opacity:0.15"/><text x="396" y="16" class="d-note">10k</text><line x1="474" y1="22" x2="474" y2="264" class="d-line" style="stroke-opacity:0.15"/><text x="474" y="16" class="d-note">100k</text><line x1="552" y1="22" x2="552" y2="264" class="d-line" style="stroke-opacity:0.15"/><text x="552" y="16" class="d-note">1M</text><line x1="630" y1="22" x2="630" y2="264" class="d-line" style="stroke-opacity:0.15"/><text x="630" y="16" class="d-note">10M</text><text x="232" y="44" class="d-small d-end">Switchboard (phone)</text><rect x="240" y="32" width="32" height="16" rx="3" class="d-user"/><text x="278" y="45" class="d-note d-start">260 h</text><text x="232" y="70" class="d-small d-end">Fisher English (phone)</text><rect x="240" y="58" width="101" height="16" rx="3" class="d-user"/><text x="347" y="71" class="d-note d-start">1,960 h</text><text x="232" y="96" class="d-small d-end">Seamless Interaction (in person)</text><rect x="240" y="84" width="125" height="16" rx="3" class="d-user"/><text x="371" y="97" class="d-note d-start">4,000 h</text><text x="232" y="122" class="d-small d-end">Human-1 (Hindi)</text><rect x="240" y="110" width="188" height="16" rx="3" class="d-user"/><text x="434" y="123" class="d-note d-start">26,000 h</text><text x="232" y="148" class="d-small d-end">Moshi instruct data</text><rect x="240" y="136" width="179" height="16" rx="3" class="d-fill2"/><text x="425" y="149" class="d-note d-start">20,000 h</text><text x="232" y="174" class="d-small d-end">SyncLLM</text><rect x="240" y="162" width="259" height="16" rx="3" class="d-fill2"/><text x="505" y="175" class="d-note d-start">212,000 h</text><text x="232" y="200" class="d-small d-end">DuplexChat (podcasts)</text><rect x="240" y="188" width="282" height="16" rx="3" class="d-agent"/><text x="528" y="201" class="d-note d-start">415,000 h</text><text x="232" y="226" class="d-small d-end">MinMo, all speech</text><rect x="240" y="214" width="323" height="16" rx="3" class="d-muted"/><text x="569" y="227" class="d-note d-start">1,400,000 h</text><text x="232" y="252" class="d-small d-end">Moshi pretraining audio</text><rect x="240" y="240" width="378" height="16" rx="3" class="d-muted"/><text x="624" y="253" class="d-note d-start">7,000,000 h</text><rect x="20" y="280" width="12" height="12" rx="2" class="d-user"/><text x="38" y="290" class="d-note d-start">real two-channel</text><rect x="195" y="280" width="12" height="12" rx="2" class="d-fill2"/><text x="213" y="290" class="d-note d-start">synthetic dialogue</text><rect x="370" y="280" width="12" height="12" rx="2" class="d-agent"/><text x="388" y="290" class="d-note d-start">separated from mixed audio</text><rect x="545" y="280" width="12" height="12" rx="2" class="d-muted"/><text x="563" y="290" class="d-note d-start">single-stream speech</text></svg>
+    <p>Three ways to make two-channel data when you only have one:</p>
+    <ul>
+      <li><strong>Diarise and split.</strong> Find who speaks when, and put each speaker on their own track (Moshi&rsquo;s stage 3).</li>
+      <li><strong>Voice a script.</strong> Have an LLM write the dialogue, voice each turn with TTS, and place the turns on two tracks with chosen gaps. A <em>negative</em> gap makes an overlap or a barge-in (SyncLLM, OmniFlatten, PersonaPlex).</li>
+      <li><strong>Separate real recordings.</strong> Pull each speaker out of podcasts with source separation (DuplexChat, about 415,000 hours of English and Japanese).</li>
+    </ul>
+    <p>Synthetic data is cheap and controllable, but it misses what makes real talk real: people matching each other&rsquo;s pace and pitch, long overlaps, and other voices in the room. The 2026 survey of the field calls open, real training data its main frontier. For Indian languages it is thinner still: Human-1, the first open Hindi duplex model, trained on 26,000 hours of real two-channel conversation collected for it.</p>
+    <p class="ref">Sources: <a href="https://catalog.ldc.upenn.edu/LDC97S62">Switchboard</a> and <a href="https://catalog.ldc.upenn.edu/LDC2004S13">Fisher</a> (LDC); <a href="https://arxiv.org/abs/2506.22554">Seamless Interaction</a>; <a href="https://arxiv.org/abs/2604.23295">Human-1</a>; <a href="https://arxiv.org/abs/2409.15594">SyncLLM</a>; <a href="https://arxiv.org/abs/2607.04941">DuplexChat</a>; <a href="https://arxiv.org/abs/2501.06282">MinMo</a>; <a href="https://arxiv.org/abs/2606.19453">2026 survey</a>.</p>
+  </section>
+
+  <section class="slide" id="rl" data-part="Training" data-title="Teaching timing with rewards">
+    <p class="kicker">Training &middot; Reinforcement learning</p>
+    <h2>Teaching timing with rewards</h2>
+    <p>Supervised training on conversation copies the average behaviour in the data. The result is often too much silence, or turns taken at the wrong moment. In 2026, several groups started to train timing directly with reinforcement learning.</p>
+    <p>The first lesson was that naive RL breaks things. Rewarding the whole token stream for good timing damaged what the model said: it started repeating itself. The fix, shared by most 2026 papers, is to <strong>separate &ldquo;when to speak&rdquo; from &ldquo;what to say&rdquo;</strong> and reward only the timing decision.</p>
+    <div class="stat-wrap"><table class="stat">
+      <thead><tr><th>Work</th><th>Date</th><th class="prose">Idea</th></tr></thead>
+      <tbody>
+        <tr><td><a href="https://arxiv.org/abs/2604.10065">ASPIRin</a></td><td>Apr 2026</td><td class="prose">Collapse the output to one choice, speak or stay silent, and run GRPO on that choice only. Better timing, half the repetition of plain GRPO.</td></tr>
+        <tr><td><a href="https://arxiv.org/abs/2606.11167">Interactivity alignment</a></td><td>Jun 2026</td><td class="prose">Separate rewards for pause handling, turn-taking, backchannels and interruptions, on short windows cut from human conversation. Applied to Moshi and PersonaPlex.</td></tr>
+        <tr><td><a href="https://arxiv.org/abs/2606.14528">BayLing-Duplex</a></td><td>Jun 2026</td><td class="prose">Supervised training on 400k duplex samples, then preference optimisation (DPO) for turn and barge-in timing.</td></tr>
+        <tr><td><a href="https://arxiv.org/abs/2607.07148">DuplexPO</a></td><td>Jul 2026</td><td class="prose">A reward split into start, backchannel, yield and participation. Keeps the base model&rsquo;s reasoning.</td></tr>
+        <tr><td><a href="https://arxiv.org/abs/2610.07727">HiPLEX</a></td><td>Oct 2026</td><td class="prose">Two policies: a control policy (pad, end pad, speak) and a content policy. Timing reward goes only to control.</td></tr>
+      </tbody>
+    </table></div>
+    <p><strong>Smaller tricks that protect the content.</strong> Moshi down-weights the loss on acoustic tokens and on padding text tokens, so most of the learning goes into the words. Freeze-Omni keeps its text LLM frozen for the whole of training. GLM-4-Voice keeps text a few tokens ahead of speech so the words are decided first.</p>
+    <p class="ref">Also: <a href="https://arxiv.org/abs/2604.14920">Dual-Axis Generative Reward Model</a>; <a href="https://arxiv.org/abs/2610.12201">SteerablePlex</a>; <a href="https://arxiv.org/abs/2411.00774">Freeze-Omni</a>; <a href="https://arxiv.org/abs/2412.02612">GLM-4-Voice</a>.</p>
+  </section>
+
+  <section class="slide" id="axes" data-part="Judging" data-title="Five things to measure">
+    <p class="kicker">Judging &middot; Overview</p>
+    <h2>Five things to measure</h2>
+    <p>A text chatbot is judged mostly on what it says. A duplex speech model has to be judged on five things, and they pull against each other.</p>
+    <div class="stat-wrap"><table class="stat">
+      <thead><tr><th>Axis</th><th class="prose">Question</th><th class="prose">Typical measures</th></tr></thead>
+      <tbody>
+        <tr><td>Timing</td><td class="prose">Does it speak and stop at the right moments?</td><td class="prose">Gaps, pauses, overlaps; takeover rate; agreement with a turn-taking judge</td></tr>
+        <tr><td>Interaction</td><td class="prose">Does it handle backchannels, interruptions, side talk, corrections?</td><td class="prose">Full-Duplex-Bench and its relatives; behaviour labels (respond, resume)</td></tr>
+        <tr><td>Latency</td><td class="prose">How fast does it answer, and how fast does it stop?</td><td class="prose">Response latency, stop latency, time to first audio</td></tr>
+        <tr><td>Content</td><td class="prose">Is what it says correct and useful?</td><td class="prose">Spoken QA, VoiceBench, URO-Bench, tool-call accuracy</td></tr>
+        <tr><td>Speech quality</td><td class="prose">Does it sound clear and natural, in the right voice?</td><td class="prose">WER of its own speech, UTMOS, DNSMOS, speaker similarity, human MOS</td></tr>
+      </tbody>
+    </table></div>
+    <p>The tension shows up in the numbers. On Full-Duplex-Bench, Moshi replies in 0.27 s but takes the turn in 98% of user pauses. Gemini Live waits through most pauses but takes 1.3 s to reply. Every benchmark also defines latency its own way, so latency numbers from different benchmarks cannot be compared.</p>
+    <p class="ref">Source: <a href="https://arxiv.org/abs/2503.04721">Full-Duplex-Bench v1</a>, 2025.</p>
+  </section>
+
+  <section class="slide" id="timing" data-part="Judging" data-title="Timing: IPUs, pauses, gaps and overlaps">
+    <p class="kicker">Judging &middot; Conversation statistics</p>
+    <h2>Timing: IPUs, pauses, gaps and overlaps</h2>
+    <p>The oldest way to judge timing comes from conversation analysis. Run voice activity detection on each speaker&rsquo;s channel and cut it into pieces:</p>
+    <svg class="diagram" viewBox="0 0 720 170" role="img" aria-label="Two speaker lanes showing an inter-pausal unit, a pause, a gap and an overlap">
+      <text x="40" y="45" class="d-small">A</text>
+      <text x="40" y="105" class="d-small">B</text>
+      <rect x="70" y="32" width="150" height="20" rx="4" class="d-user"/>
+      <rect x="270" y="32" width="170" height="20" rx="4" class="d-user"/>
+      <rect x="480" y="92" width="200" height="20" rx="4" class="d-agent"/>
+      <rect x="400" y="92" width="40" height="20" rx="4" class="d-agent" opacity="0.55"/>
+      <text x="145" y="24" class="d-note">IPU</text>
+      <line x1="220" y1="62" x2="270" y2="62" class="d-line"/><text x="245" y="78" class="d-small">pause</text>
+      <line x1="440" y1="125" x2="480" y2="125" class="d-line"/><text x="460" y="142" class="d-small">gap</text>
+      <line x1="400" y1="20" x2="400" y2="120" class="d-line" stroke-dasharray="3 3"/><line x1="440" y1="20" x2="440" y2="120" class="d-line" stroke-dasharray="3 3"/>
+      <text x="420" y="160" class="d-small">overlap (a backchannel)</text>
+    </svg>
+    <ul>
+      <li><strong>IPU</strong> (inter-pausal unit): a stretch of speech with at least 200 ms of silence on each side.</li>
+      <li><strong>Pause</strong>: silence between two IPUs of the same speaker.</li>
+      <li><strong>Gap</strong>: silence between IPUs of different speakers. A negative gap is an overlap. Together they are the <strong>floor-transfer offset</strong>.</li>
+      <li><strong>Overlap</strong>: time when both speak.</li>
+    </ul>
+    <p>A good model&rsquo;s totals should look like real conversation. Moshi&rsquo;s paper continues 10-second Fisher phone-call prompts and adds up each one:</p>
+    <div class="stat-wrap"><table class="stat">
+      <thead><tr><th>System</th><th>IPU</th><th>Pause</th><th>Gap</th><th>Overlap</th><th class="prose">Note</th></tr></thead>
+      <tbody>
+        <tr><td>Real conversation</td><td>51.1</td><td>6.4</td><td>4.2</td><td>3.3</td><td class="prose">the target</td></tr>
+        <tr><td>Moshi</td><td>50.8</td><td>7.0</td><td>4.5</td><td>4.1</td><td class="prose">close to real</td></tr>
+        <tr><td>dGSLM</td><td>41.4</td><td>13.8</td><td>10.7</td><td>6.1</td><td class="prose">too much silence</td></tr>
+        <tr><td>Cascade</td><td>54.8</td><td>0.0</td><td>5.3</td><td>0.0</td><td class="prose">strict turns: no pauses, no overlap</td></tr>
+      </tbody>
+    </table></div>
+    <p><strong>Human reference values.</strong> In ten languages, answers to yes/no questions start a mean 208 ms after the question ends; the most common offset is 0 ms. A single word takes about 600 ms to plan, so people plan their reply while the other person is still talking. In Switchboard, overlap is about 4% of the audio, and about 30% of turn changes happen in overlap.</p>
+    <p class="ref">Sources: <a href="https://arxiv.org/abs/2410.00037">Moshi</a>, Table 9 (seconds); <a href="https://arxiv.org/abs/2203.16502">dGSLM</a> (the definitions); <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC2705608/">Stivers et al. 2009</a>; <a href="https://www.frontiersin.org/articles/10.3389/fpsyg.2015.00731/full">Levinson and Torreira 2015</a>.</p>
+  </section>
+
+  <section class="slide" id="fdb" data-part="Judging" data-title="Full-Duplex-Bench: the reference test">
+    <p class="kicker">Judging &middot; Behaviour tests</p>
+    <h2>Full-Duplex-Bench: the reference test</h2>
+    <p>Statistics say whether a model&rsquo;s timing <em>looks</em> human on average. Full-Duplex-Bench (2025) asks whether it does the right thing in four specific moments. Its key measure is the <strong>takeover rate (TOR)</strong>: the share of moments where the model takes the turn. Saying anything other than silence or a short backchannel (under 1 s and under two words) counts as a takeover.</p>
+    <div class="stat-wrap"><table class="stat">
+      <thead><tr><th>Moment</th><th class="prose">Right behaviour</th><th class="prose">Measures</th></tr></thead>
+      <tbody>
+        <tr><td>User pauses</td><td class="prose">Do not take over</td><td class="prose">TOR, lower is better</td></tr>
+        <tr><td>Backchannel</td><td class="prose">Give &ldquo;mm-hm&rdquo; at human-like moments, without taking over</td><td class="prose">TOR; backchannels per second; Jensen-Shannon divergence between the model&rsquo;s and humans&rsquo; backchannel timing (0 = same, 1 = completely different)</td></tr>
+        <tr><td>Turn ends</td><td class="prose">Take the turn, quickly</td><td class="prose">TOR, higher is better; latency from the end of the user&rsquo;s speech to the model&rsquo;s first sound</td></tr>
+        <tr><td>User interrupts</td><td class="prose">Stop, then answer the interruption</td><td class="prose">TOR; latency; GPT-4o rates the reply 0&ndash;5 for relevance</td></tr>
+      </tbody>
+    </table></div>
+    <div class="stat-wrap"><table class="stat">
+      <thead><tr><th>Model</th><th>Pause TOR &darr;</th><th>Turn latency</th><th>Interruption reply (0&ndash;5)</th><th>Interruption latency</th></tr></thead>
+      <tbody>
+        <tr><td>Moshi</td><td>0.98</td><td>0.27 s</td><td>0.77</td><td>0.26 s</td></tr>
+        <tr><td>dGSLM</td><td>0.94</td><td>0.35 s</td><td>0.20</td><td>2.53 s</td></tr>
+        <tr><td>Freeze-Omni</td><td>0.48</td><td>0.95 s</td><td>3.62</td><td>1.41 s</td></tr>
+        <tr><td>Gemini Live</td><td>0.31</td><td>1.30 s</td><td>3.38</td><td>1.18 s</td></tr>
+      </tbody>
+    </table></div>
+    <svg class="diagram" viewBox="0 0 720 250" role="img" aria-label="Pause takeover rate against turn latency on Full-Duplex-Bench"><rect x="90" y="149" width="207.143" height="51" rx="4" class="d-ok-zone"/><text x="193.571" y="178.5" class="d-note">the goal</text><line x1="90" y1="200" x2="670" y2="200" class="d-line"/><line x1="90" y1="200" x2="90" y2="30" class="d-line"/><text x="90" y="216" class="d-note">0.0 s</text><text x="172.857" y="216" class="d-note">0.2 s</text><text x="255.714" y="216" class="d-note">0.4 s</text><text x="338.571" y="216" class="d-note">0.6 s</text><text x="421.429" y="216" class="d-note">0.8 s</text><text x="504.286" y="216" class="d-note">1.0 s</text><text x="587.143" y="216" class="d-note">1.2 s</text><text x="670" y="216" class="d-note">1.4 s</text><text x="82" y="204" class="d-note d-end">0.0</text><text x="82" y="119" class="d-note d-end">0.5</text><text x="82" y="34" class="d-note d-end">1.0</text><text x="380" y="238" class="d-small">Time to reply when a turn ends</text><text x="30" y="115" class="d-small" transform="rotate(-90 30 115)">Takes over in pauses</text><circle cx="200" cy="33" r="7" class="d-fill2"/><text x="188" y="37" class="d-small d-end">Moshi</text><circle cx="236" cy="41" r="7" class="d-fill2"/><text x="248" y="55" class="d-small d-start">dGSLM</text><circle cx="485" cy="118" r="7" class="d-fill2"/><text x="497" y="122" class="d-small d-start">Freeze-Omni</text><circle cx="629" cy="147" r="7" class="d-fill2"/><text x="641" y="151" class="d-small d-start">Gemini Live</text></svg>
+    <p>Fast and eager on one side, slow and polite on the other. No model in the first round was both. Later models move toward the corner: PersonaPlex reports a 0.07 s turn latency on the same test.</p>
+    <p class="ref">Source: <a href="https://arxiv.org/abs/2503.04721">Full-Duplex-Bench v1</a>; <a href="https://github.com/DanielLin94144/Full-Duplex-Bench">code</a>. Pause numbers are on the Candor subset.</p>
+  </section>
+
+  <section class="slide" id="fdb2" data-part="Judging" data-title="Overlap, multi-turn and tools">
+    <p class="kicker">Judging &middot; Later versions</p>
+    <h2>Overlap, multi-turn and tools</h2>
+    <p>Each new version of Full-Duplex-Bench adds a harder part of real calls.</p>
+    <h3>v1.5: what to do when someone talks over you</h3>
+    <p>Four overlap cases: the user interrupts (should respond), the user backchannels, the user talks to someone else, and background speech (all three: should carry on). It adds <strong>stop latency</strong> (from the start of the overlap to the model going quiet) and <strong>response latency</strong>, and GPT-4o labels each reply as respond or resume. GPT-4o Realtime stops fastest, in 0.23 s, but almost never resumes when the user talks to someone else (2%) or there is background speech (4%). Systems turn out to be either <em>responsive</em> or <em>floor-holding</em>.</p>
+    <h3>v2: many turns with a simulated caller</h3>
+    <p>gpt-realtime plays a caller with goals, at fast or slow pace. A judge LLM scores the transcript 1&ndash;5 on turn-taking, instruction following, corrections (&ldquo;no, I meant Tuesday&rdquo;), entity tracking and safety. Fast pace, corrections: GPT-Realtime 4.0, Moshi 2.9, Freeze-Omni 2.7.</p>
+    <h3>v3: tool calls with real, messy speech</h3>
+    <p>100 scenarios with five kinds of disfluency, such as self-corrections. <strong>Pass@1</strong> means every expected tool was called with every argument correct. GPT-Realtime is best at 0.60. A plain cascade takes a turn every time but needs 10 s per task.</p>
+    <p class="ref">Sources: <a href="https://arxiv.org/abs/2507.23159">v1.5</a>, <a href="https://arxiv.org/abs/2510.07838">v2</a>, <a href="https://arxiv.org/abs/2604.04847">v3</a>.</p>
+  </section>
+
+  <section class="slide" id="judge" data-part="Judging" data-title="A judge trained on people">
+    <p class="kicker">Judging &middot; Learned judges</p>
+    <h2>A judge trained on people</h2>
+    <p>Fixed rules (&ldquo;a backchannel is under 1 s&rdquo;) are crude. <strong>Talking Turns</strong> (ICLR 2025) instead trains a turn-taking model on the Switchboard phone corpus. Every 40 ms it looks at the last 30 s of audio and predicts what a person would do next: stay silent, backchannel, interrupt, take the turn, or keep talking. It scores about 0.91 ROC-AUC on held-out human conversation.</p>
+    <p>That model then becomes the judge. At five kinds of moment, it checks whether the system did what a person would likely have done:</p>
+    <ol>
+      <li>The user pauses: should the system speak?</li>
+      <li>The user is speaking: should it backchannel?</li>
+      <li>The user is speaking: should it interrupt?</li>
+      <li>The system pauses: does it signal whether the user may speak?</li>
+      <li>The user interrupts: does the system yield?</li>
+    </ol>
+    <p>Findings: systems often misjudge when to speak, interrupt too much, and almost never backchannel. Moshi rarely yields when interrupted.</p>
+    <p>The newest benchmark in this style, <strong>TurnBench</strong> (2026), uses 30 hours of hand-labelled conversation. Its sharpest finding: people start talking a median 151 ms <em>before</em> the other person finishes. No system matches that without too many false starts.</p>
+    <p class="ref">Sources: <a href="https://arxiv.org/abs/2503.01174">Talking Turns</a>; <a href="https://arxiv.org/abs/2608.25218">TurnBench</a>.</p>
+  </section>
+
+  <section class="slide" id="content" data-part="Judging" data-title="Is it still smart?">
+    <p class="kicker">Judging &middot; Content</p>
+    <h2>Is it still smart?</h2>
+    <p>Adding speech to an LLM usually costs it some intelligence. Moshi on spoken questions, compared with its own text backbone answering the same questions as text:</p>
+    <div class="stat-wrap"><table class="stat">
+      <thead><tr><th>Spoken QA set</th><th>Moshi (speech)</th><th>Helium (text)</th></tr></thead>
+      <tbody>
+        <tr><td>Web Questions</td><td>26.6</td><td>32.3</td></tr>
+        <tr><td>Llama Questions</td><td>62.3</td><td>75.0</td></tr>
+        <tr><td>TriviaQA (audio)</td><td>22.8</td><td>56.4</td></tr>
+      </tbody>
+    </table></div>
+    <p>An answer counts as right if the gold answer appears in a transcript of the model&rsquo;s spoken reply.</p>
+    <p>Broader suites:</p>
+    <ul>
+      <li><strong>VoiceBench</strong>: spoken versions of AlpacaEval, IFEval, OpenBookQA, MMSU, accented QA and refusal tests, plus robustness to speaker, noise and disfluency. Whisper + GPT-4o scores 87.2, GPT-4o audio 86.4, Moshi 27.5.</li>
+      <li><strong>URO-Bench</strong>: speech in, speech out; understanding, reasoning and oral conversation, in English, Chinese and seven more languages. A cascade beats GLM-4-Voice on all three (reasoning 82.9 vs 55.5).</li>
+      <li><strong>Big Bench Audio</strong>: 1,000 Big Bench Hard reasoning questions, read aloud.</li>
+      <li><strong>SD-Eval</strong>: does the reply suit the speaker&rsquo;s emotion, accent, age and surroundings?</li>
+      <li><strong>MMAU</strong> and <strong>AIR-Bench</strong>: understanding of speech, sounds and music.</li>
+    </ul>
+    <p>This is why 2026 methods such as DuplexPO and D2 put so much effort into keeping the base model&rsquo;s ability while teaching timing.</p>
+    <p class="ref">Sources: <a href="https://arxiv.org/abs/2410.00037">Moshi</a>; <a href="https://arxiv.org/abs/2410.17196">VoiceBench</a>; <a href="https://arxiv.org/abs/2502.17810">URO-Bench</a>; <a href="https://huggingface.co/datasets/ArtificialAnalysis/big_bench_audio">Big Bench Audio</a>; <a href="https://arxiv.org/abs/2406.13340">SD-Eval</a>; <a href="https://arxiv.org/abs/2410.19168">MMAU</a>; <a href="https://arxiv.org/abs/2402.07729">AIR-Bench</a>; <a href="https://arxiv.org/abs/2305.15255">Llama Questions</a>.</p>
+  </section>
+
+  <section class="slide" id="quality" data-part="Judging" data-title="Does it sound right?">
+    <p class="kicker">Judging &middot; Speech quality</p>
+    <h2>Does it sound right?</h2>
+    <div class="stat-wrap"><table class="stat">
+      <thead><tr><th>Metric</th><th class="prose">How it works</th><th class="prose">Watch out for</th></tr></thead>
+      <tbody>
+        <tr><td>WER / CER</td><td class="prose">Transcribe the model&rsquo;s speech with an ASR model and compare with the text it meant to say. Moshi used as TTS: 4.7% WER on LibriSpeech.</td><td class="prose">Measures intelligibility, not naturalness. Depends on the ASR model used.</td></tr>
+        <tr><td>MOS</td><td class="prose">People rate clips 1&ndash;5. CMOS compares two clips side by side. MUSHRA rates several against a hidden reference.</td><td class="prose">Shifts with test design; cannot be compared across papers.</td></tr>
+        <tr><td>UTMOS</td><td class="prose">A neural network trained to predict MOS. Won the VoiceMOS 2022 challenge.</td><td class="prose">Trained on read speech; less reliable for chatty speech.</td></tr>
+        <tr><td>DNSMOS</td><td class="prose">Predicts signal, background and overall quality with no reference clip.</td><td class="prose">Built for noise suppression, not dialogue.</td></tr>
+        <tr><td>Speaker similarity</td><td class="prose">Cosine similarity between speaker embeddings (often WavLM) of the output and a reference voice.</td><td class="prose">Embedding models differ, so numbers do not carry across papers.</td></tr>
+      </tbody>
+    </table></div>
+    <p>Moshi reports its codec at 81.0 on MUSHRA against 90.6 for the real audio, and keeps its own voice in 98.7% of segments.</p>
+    <p class="ref">Sources: <a href="https://arxiv.org/abs/2410.00037">Moshi</a>; <a href="https://arxiv.org/abs/2204.02152">UTMOS</a>; <a href="https://arxiv.org/abs/2110.01763">DNSMOS P.835</a>; <a href="https://www.isca-archive.org/ssw_2023/kirkland23_ssw.html">Kirkland et al. 2023</a> on MOS.</p>
+  </section>
+
+  <section class="slide" id="benches" data-part="Judging" data-title="The other benchmarks">
+    <p class="kicker">Judging &middot; The landscape</p>
+    <h2>The other benchmarks</h2>
+    <p>Nearly all of these are from 2025 or 2026.</p>
+    <div class="stat-wrap"><table class="stat">
+      <thead><tr><th>Benchmark</th><th class="prose">What it tests</th><th class="prose">Headline</th></tr></thead>
+      <tbody>
+        <tr><td><a href="https://arxiv.org/abs/2507.19040">FD-Bench</a></td><td class="prose">1,200 interruptions from simulated users, with noise</td><td class="prose">Moshi, Freeze-Omni and VITA-1.5 often miss interruptions</td></tr>
+        <tr><td><a href="https://arxiv.org/abs/2509.22243">FLEXI</a></td><td class="prose">Six scenarios, including emergencies where the model must interrupt</td><td class="prose">Open models trail commercial ones</td></tr>
+        <tr><td><a href="https://arxiv.org/abs/2509.26388">Game-Time</a></td><td class="prose">Timing tasks: keep a tempo, speak in sync</td><td class="prose">Nearly all models degrade sharply</td></tr>
+        <tr><td><a href="https://arxiv.org/abs/2511.10262">MTR-DuplexBench</a></td><td class="prose">Many rounds, scored per turn</td><td class="prose">Quality drops over rounds</td></tr>
+        <tr><td><a href="https://arxiv.org/abs/2609.31967">IndicFDB</a></td><td class="prose">Full-Duplex-Bench in ten Indian languages, 12,350 samples</td><td class="prose">Commercial APIs are fast or patient with pauses, not both</td></tr>
+        <tr><td><a href="https://arxiv.org/abs/2609.31948">Duplex-MPE</a></td><td class="prose">3&ndash;4 people and one assistant</td><td class="prose">Open models talk too often</td></tr>
+        <tr><td><a href="https://arxiv.org/abs/2607.20460">Instruct-FD</a></td><td class="prose">Follow instructions like &ldquo;backchannel more&rdquo;</td><td class="prose">Best system: 64% adherence</td></tr>
+        <tr><td><a href="https://arxiv.org/abs/2610.32349">FD-LHB</a></td><td class="prose">Long conversations</td><td class="prose">Every model degrades within minutes</td></tr>
+        <tr><td><a href="https://arxiv.org/abs/2603.13686">&tau;-Voice</a></td><td class="prose">Customer-service tasks by voice</td><td class="prose">Voice agents keep well under half of the text model&rsquo;s success</td></tr>
+        <tr><td><a href="https://arxiv.org/abs/2605.13841">EVA-Bench</a></td><td class="prose">Task accuracy and caller experience together</td><td class="prose">No system above 0.5 on both</td></tr>
+        <tr><td><a href="https://arxiv.org/abs/2512.14865">Audio MultiChallenge</a></td><td class="prose">452 real multi-turn spoken conversations</td><td class="prose">Best pass rate 55%</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section class="slide" id="judges" data-part="Judging" data-title="Who judges the judges?">
+    <p class="kicker">Judging &middot; Caveats</p>
+    <h2>Who judges the judges?</h2>
+    <ul>
+      <li><strong>Transcript judges lose the sound.</strong> Most benchmarks transcribe the audio and ask a text LLM to score it. Timing, tone and hesitation disappear, and transcription errors leak into the score.</li>
+      <li><strong>Audio judges have biases.</strong> Audio LLMs used as judges can agree well with human preference (0.91 Spearman in AudioJudge), but prefer longer answers and the first clip they hear.</li>
+      <li><strong>Static benchmarks miss what users want.</strong> In Talk Arena, 20 standard benchmarks explained only about 30% of what real users preferred in 7,500 conversations.</li>
+      <li><strong>MOS is not portable.</strong> A review of 133 TTS papers found MOS shifts with how the test is run.</li>
+      <li><strong>Numbers are self-reported.</strong> Most results here are the authors&rsquo; own, on their own set-up, and latency depends on hardware and network.</li>
+    </ul>
+    <p>The test that matters is still a real conversation. Benchmarks are useful for finding specific failures, and weak at ranking systems overall.</p>
+    <p class="ref">Sources: <a href="https://arxiv.org/abs/2507.12705">AudioJudge</a>; <a href="https://arxiv.org/abs/2502.15919">Talk Arena</a>; <a href="https://www.isca-archive.org/ssw_2023/kirkland23_ssw.html">Kirkland et al. 2023</a>.</p>
+  </section>
+
+  <section class="slide" id="history" data-part="Where it stands" data-title="A short history">
+    <p class="kicker">Where it stands &middot; Timeline</p>
+    <h2>A short history</h2>
+    <div class="stat-wrap"><table class="stat">
+      <thead><tr><th>When</th><th class="prose">What happened</th></tr></thead>
+      <tbody>
+        <tr><td>1974</td><td class="prose">Sacks, Schegloff and Jefferson describe the rules of turn-taking in conversation.</td></tr>
+        <tr><td>2009</td><td class="prose">Stivers et al. measure gaps in ten languages: about 200 ms everywhere.</td></tr>
+        <tr><td>2020</td><td class="prose"><a href="https://arxiv.org/abs/2010.10874">TurnGPT</a> predicts the end of a turn from the words.</td></tr>
+        <tr><td>Mar 2022</td><td class="prose"><a href="https://arxiv.org/abs/2203.16502">dGSLM</a>: first two-channel spoken dialogue model. Natural timing, but the words are babble.</td></tr>
+        <tr><td>May 2022</td><td class="prose"><a href="https://arxiv.org/abs/2205.09812">Voice Activity Projection</a>: predict both speakers&rsquo; voice activity for the next 2 s, no labels needed.</td></tr>
+        <tr><td>May 2024</td><td class="prose">The GPT-4o voice demo makes speech-to-speech mainstream.</td></tr>
+        <tr><td>Sep 2024</td><td class="prose"><a href="https://arxiv.org/abs/2410.00037">Moshi</a>: the first real-time, open-weight, full-duplex spoken LLM. <a href="https://arxiv.org/abs/2409.15594">SyncLLM</a> the same month.</td></tr>
+        <tr><td>Oct 2024 &ndash; Jan 2025</td><td class="prose">OmniFlatten, Freeze-Omni, SALMONN-omni, MinMo: many designs, mostly from Chinese labs.</td></tr>
+        <tr><td>Mar 2025</td><td class="prose">First interaction benchmarks: <a href="https://arxiv.org/abs/2503.04721">Full-Duplex-Bench</a> and <a href="https://arxiv.org/abs/2503.01174">Talking Turns</a>.</td></tr>
+        <tr><td>Jul &ndash; Oct 2025</td><td class="prose">A wave of benchmarks; first survey of the field; gpt-realtime adds phone calls.</td></tr>
+        <tr><td>Jan 2026</td><td class="prose"><a href="https://arxiv.org/abs/2602.06053">PersonaPlex</a>: role set by a text prompt, voice set by an audio prompt.</td></tr>
+        <tr><td>Apr 2026</td><td class="prose">Reinforcement learning for timing; <a href="https://arxiv.org/abs/2604.23295">Human-1</a>, the first open Hindi duplex model; Full-Duplex-Bench v3 with tool use.</td></tr>
+        <tr><td>Sep &ndash; Oct 2026</td><td class="prose">Tool calls inside duplex models, long-call collapse diagnosed, multi-party tests, IndicFDB for ten Indian languages. Over 40 papers in about a month.</td></tr>
+      </tbody>
+    </table></div>
+    <p class="ref">Dates are arXiv first-version dates. The 1974 paper is &ldquo;A simplest systematics for the organization of turn-taking for conversation&rdquo;, Language 50(4).</p>
+  </section>
+
+  <section class="slide" id="agentic" data-part="Where it stands" data-title="Fast talker, slow thinker">
+    <p class="kicker">Where it stands &middot; Agents</p>
+    <h2>Fast talker, slow thinker</h2>
+    <p>A duplex model has to emit a frame every 80 ms. That leaves no time for long reasoning or a tool call that takes two seconds. The 2026 answer is to split the work, much like the &ldquo;system 1, system 2&rdquo; idea from psychology:</p>
+    <ul>
+      <li>A <strong>fast duplex speech model</strong> owns the conversation: timing, backchannels, interruptions, small talk, &ldquo;let me check that&rdquo;.</li>
+      <li>A <strong>slow text LLM or agent</strong> behind it does reasoning, tool calls and memory, and hands results back.</li>
+    </ul>
+    <p>The link between them varies. NVIDIA&rsquo;s frontend-backend design has the speech model emit a <em>delegate</em> token and stream the transcript to a text LLM, then inject the result back; it reports 92&ndash;97% tool-call recall with turn-taking intact. SALMONN-duo learns when to answer itself and when to delegate. NemotronLabs VoiceChat and DuplexSLA go the other way and put tool calls on their own output stream inside one model.</p>
+    <p>Related ideas: <strong>thinking while listening</strong> (reasoning during the user&rsquo;s turn, so it costs no extra time) and <strong>retrieval inside the frame budget</strong> (feeding retrieved text into a running model).</p>
+    <p class="ref">Sources: <a href="https://arxiv.org/abs/2609.19334">frontend-backend tool calls</a>; <a href="https://arxiv.org/abs/2609.34247">SALMONN-duo</a>; <a href="https://arxiv.org/abs/2609.21967">NemotronLabs VoiceChat</a>; <a href="https://arxiv.org/abs/2605.20755">DuplexSLA</a>; <a href="https://arxiv.org/abs/2510.05150">Chronological Thinking</a>; <a href="https://arxiv.org/abs/2510.06917">SHANKS</a>.</p>
+  </section>
+
+  <section class="slide" id="status" data-part="Where it stands" data-title="Solved, partly solved, open">
+    <p class="kicker">Where it stands &middot; November 2026</p>
+    <h2>Solved, partly solved, open</h2>
+    <div class="stat-wrap"><table class="stat">
+      <thead><tr><th>Status</th><th class="prose">Problem</th><th class="prose">Evidence</th></tr></thead>
+      <tbody>
+        <tr><td class="tag-solved">Works</td><td class="prose">Fast replies in a single exchange (0.2&ndash;0.8 s)</td><td class="prose"><a href="https://arxiv.org/abs/2410.00037">Moshi</a>, <a href="https://arxiv.org/abs/2610.17124">D2</a></td></tr>
+        <tr><td class="tag-solved">Works</td><td class="prose">Stopping when the user clearly interrupts</td><td class="prose">D2: 99.5%; <a href="https://arxiv.org/abs/2609.21967">VoiceChat</a>: 100% on FDB v1</td></tr>
+        <tr><td class="tag-solved">Works</td><td class="prose">Learning timing, overlap and backchannels from two-channel recordings</td><td class="prose"><a href="https://arxiv.org/abs/2203.16502">dGSLM</a>, Moshi, <a href="https://arxiv.org/abs/2604.23295">Human-1</a></td></tr>
+        <tr><td class="tag-partly">Partly</td><td class="prose">Keeping the base LLM&rsquo;s intelligence after adding duplex behaviour</td><td class="prose"><a href="https://arxiv.org/abs/2607.07148">DuplexPO</a>, D2</td></tr>
+        <tr><td class="tag-partly">Partly</td><td class="prose">Tools and reasoning during a live call</td><td class="prose"><a href="https://arxiv.org/abs/2609.19334">frontend-backend</a>, <a href="https://arxiv.org/abs/2609.34247">SALMONN-duo</a></td></tr>
+        <tr><td class="tag-partly">Partly</td><td class="prose">Following instructions about turn-taking style (best: 64% adherence)</td><td class="prose"><a href="https://arxiv.org/abs/2607.20460">Instruct-FD</a></td></tr>
+        <tr><td class="tag-open">Open</td><td class="prose">Telling a backchannel from a real interruption</td><td class="prose"><a href="https://arxiv.org/abs/2609.17360">ECHO</a>, <a href="https://arxiv.org/abs/2507.23159">FDB v1.5</a></td></tr>
+        <tr><td class="tag-open">Open</td><td class="prose">Human timing: people start ~150 ms <em>before</em> a turn ends; models start 400&ndash;560 ms after</td><td class="prose"><a href="https://arxiv.org/abs/2608.25218">TurnBench</a>, <a href="https://arxiv.org/abs/2610.08683">Coupled but Late</a></td></tr>
+        <tr><td class="tag-open">Open</td><td class="prose">Side talk, background voices, several speakers, the phone handed to someone else</td><td class="prose"><a href="https://arxiv.org/abs/2609.31948">Duplex-MPE</a></td></tr>
+        <tr><td class="tag-open">Open</td><td class="prose">Long calls: every tested model degrades within minutes</td><td class="prose"><a href="https://arxiv.org/abs/2610.32349">FD-LHB</a></td></tr>
+        <tr><td class="tag-open">Open</td><td class="prose">Mid-sentence self-corrections and multi-turn consistency</td><td class="prose"><a href="https://arxiv.org/abs/2510.07838">FDB v2</a>, <a href="https://arxiv.org/abs/2604.04847">FDB v3</a></td></tr>
+        <tr><td class="tag-open">Open</td><td class="prose">Languages beyond English and Chinese, code-mixing, 8 kHz phone audio</td><td class="prose"><a href="https://arxiv.org/abs/2609.31967">IndicFDB</a>, Human-1</td></tr>
+        <tr><td class="tag-open">Open</td><td class="prose">Open training data: real two-channel conversation is scarce</td><td class="prose"><a href="https://arxiv.org/abs/2606.19453">2026 survey</a></td></tr>
+      </tbody>
+    </table></div>
+    <p>One more thing worth knowing: production systems from OpenAI, Google and Amazon still expose a separate, tunable turn-detection setting. Fully learned turn-taking leads in research, and lags in robustness on long, noisy, many-speaker calls.</p>
+  </section>
+
+  <section class="slide" id="read" data-part="Where it stands" data-title="What to read first">
+    <p class="kicker">The end</p>
+    <h2>What to read first</h2>
+    <ol>
+      <li>Chen and Yu, <a href="https://arxiv.org/abs/2509.14515">From Turn-Taking to Synchronous Dialogue</a> (2025). A short, clear map of designs and evaluation.</li>
+      <li><a href="https://arxiv.org/abs/2606.19453">A Survey of Full-Duplex Spoken Dialogue Systems</a> (2026). The newest survey, with a vocabulary for where decisions are made.</li>
+      <li>The <a href="https://arxiv.org/abs/2410.00037">Moshi paper</a> (2024). The design most open work builds on, and the clearest case against cascades.</li>
+      <li><a href="https://arxiv.org/abs/2503.04721">Full-Duplex-Bench</a> v1 and <a href="https://arxiv.org/abs/2507.23159">v1.5</a>. The behaviours, in measurable terms.</li>
+      <li><a href="https://arxiv.org/abs/2503.01174">Talking Turns</a> (ICLR 2025). How to judge timing with a model trained on human conversation.</li>
+      <li><a href="https://arxiv.org/abs/2411.13577">WavChat</a> and <a href="https://arxiv.org/abs/2504.08528">On the Landscape of Spoken Language Models</a>. Tokenisers, training and evaluation for speech LMs in general.</li>
+      <li><a href="https://arxiv.org/abs/2609.31967">IndicFDB</a> and <a href="https://arxiv.org/abs/2604.23295">Human-1</a>. The India-specific work: a ten-language benchmark and a Hindi duplex model.</li>
+    </ol>
+    <p>The field moves fast. Over a hundred arXiv papers had &ldquo;full-duplex&rdquo; in the title in 2026 alone, so treat every number here as a snapshot from November 2026.</p>
+    <p><a href="./index.html">&larr; Back to all posts</a></p>
+  </section>
+
+</div>
+    </main>
+    <footer class="site-footer">
+        <p><a href="mailto:adsk2050@gmail.com">adsk2050@gmail.com</a> &middot; <a href="https://github.com/adsk2050">GitHub</a> &middot; <a href="https://linkedin.com/in/anmoldeep1">LinkedIn</a> &middot; <a href="https://stackoverflow.com/users/7418045/anmol-deep">Stack Overflow</a></p>
+        <p>&copy; 2026 Anmol Deep</p>
+    </footer>
+
+<script>
+(function () {
+  /* ---------- Turn-taking timeline ----------
+     Illustrations built from typical numbers in the papers cited on the slide,
+     not recordings. Times are in seconds. */
+  const T_MAX = 7;
+  const SCENARIOS = {
+    end: {
+      user: [[0.2, 2.0, 'What time does the bank open?']],
+      systems: {
+        cascade: {
+          agent: [[2.0, 2.7, 'waiting for 700 ms of silence', 'quiet'], [2.7, 3.5, 'ASR + LLM + TTS', 'quiet'], [3.5, 5.0, 'It opens at ten.']],
+          verdict: ['badv', 'Replies after a 1.5 s gap.'],
+          text: 'The cascade cannot start until a silence timer fires. Then speech recognition finishes, the LLM writes its first words and TTS makes the first sound. Each step is short, but they add up.'
+        },
+        duplex: {
+          agent: [[2.4, 3.9, 'It opens at ten.']],
+          verdict: ['good', 'Replies after about 0.4 s.'],
+          text: 'The model hears every 80 ms frame as it arrives and is already producing output frames, so the reply starts within a few frames. Measured duplex models answer in roughly 0.1 to 0.6 s.'
+        },
+        human: {
+          agent: [[2.2, 3.7, 'Ten o’clock.']],
+          verdict: ['good', 'Replies after about 0.2 s.'],
+          text: 'People leave a gap of about 200 ms between turns, in every language studied. That is faster than anyone can plan a reply, so listeners predict the end of the turn and plan while the other person is still talking.'
+        }
+      }
+    },
+    pause: {
+      user: [[0.2, 1.6, 'My number is 4 5 2…'], [1.6, 2.6, '(thinking)', 'quiet'], [2.6, 3.6, '…7 1 9']],
+      systems: {
+        cascade: {
+          agent: [[2.3, 3.0, 'timer fired', 'quiet'], [3.0, 4.4, 'Sorry, could you repeat?', 'bad']],
+          verdict: ['badv', 'Cuts in during the pause, then talks over the user.'],
+          text: 'A one-second thinking pause looks exactly like the end of a turn to a silence timer. The agent starts its reply just as the user carries on. Raising the timer fixes this case and makes every other reply slower.'
+        },
+        duplex: {
+          agent: [[2.0, 2.25, 'mm'], [3.9, 5.2, 'Got it: 452719.']],
+          verdict: ['good', 'Waits, and backchannels during the pause.'],
+          text: 'A model trained on real conversations has heard many unfinished number readings. The words and the flat pitch say the turn is not over, so it waits, and may say “mm” to show it is listening. This is the goal, not a given: on Full-Duplex-Bench, Moshi takes the turn in 98% of user pauses. Gemini Live in 31%.'
+        },
+        human: {
+          agent: [[2.0, 2.25, 'hmm'], [3.8, 5.0, '452719, right?']],
+          verdict: ['good', 'Waits for the rest.'],
+          text: 'People treat the pause as part of the turn: the sentence is grammatically unfinished.'
+        }
+      }
+    },
+    backchannel: {
+      user: [[1.8, 2.1, 'uh-huh'], [3.5, 3.8, 'okay']],
+      systems: {
+        cascade: {
+          agent: [[0.2, 2.05, 'Your loan has three parts…'], [2.9, 4.0, 'Sorry, go ahead?', 'bad']],
+          verdict: ['badv', 'Stops for an “uh-huh”.'],
+          text: 'Voice activity detection hears speech and stops the agent. It cannot tell “uh-huh” (keep going) from “wait” (stop). Benchmarks call these systems trigger-happy: on one test, three of four systems kept talking through fewer than 13% of backchannels.'
+        },
+        duplex: {
+          agent: [[0.2, 5.6, 'Your loan has three parts: the principal, the interest and a fee…']],
+          verdict: ['good', 'Keeps talking.'],
+          text: 'A duplex model listens while it speaks. Short, low-energy feedback words in the user stream are common in its training data while the other side keeps talking, so it learns to carry on.'
+        },
+        human: {
+          agent: [[0.2, 5.6, 'Your loan has three parts: the principal, the interest and a fee…']],
+          verdict: ['good', 'Keeps talking.'],
+          text: 'Backchannels are about a fifth of all turns in phone conversation. They mean “I am following, go on”.'
+        }
+      }
+    },
+    interrupt: {
+      user: [[2.0, 2.8, 'Wait, just the cheapest one.']],
+      systems: {
+        cascade: {
+          agent: [[0.2, 2.3, 'There are five plans. The first…'], [2.8, 3.5, 'waiting for silence', 'quiet'], [3.5, 4.3, 'ASR + LLM + TTS', 'quiet'], [4.3, 5.8, 'The cheapest is…']],
+          verdict: ['badv', 'Stops, but answers 1.5 s later.'],
+          text: 'Barge-in works: voice activity detection stops the audio within a few hundred milliseconds. But the reply still waits for the silence timer and the whole pipeline.'
+        },
+        duplex: {
+          agent: [[0.2, 2.25, 'There are five plans. The first…'], [3.1, 4.6, 'The cheapest is…']],
+          verdict: ['good', 'Stops at once and answers quickly.'],
+          text: 'Stopping on a clear interruption is close to solved for duplex models: recent ones report 99% or more on Full-Duplex-Bench.'
+        },
+        human: {
+          agent: [[0.2, 2.3, 'There are five plans. The first…'], [3.0, 4.4, 'Sure, the cheapest is…']],
+          verdict: ['good', 'Yields and answers.'],
+          text: 'People yield to a real interruption within a few hundred milliseconds.'
+        }
+      }
+    },
+    side: {
+      user: [[0.2, 1.2, 'Hold on.'], [1.6, 3.4, '(to family) Where is the passbook?'], [4.4, 5.6, 'Okay, it says 3 lakh.']],
+      systems: {
+        cascade: {
+          agent: [[3.4, 4.1, 'timer fired', 'quiet'], [4.1, 5.4, 'Your passbook should be…', 'bad']],
+          verdict: ['badv', 'Answers a question that was not meant for it.'],
+          text: 'Everything on the line is “the user” to a cascade, so it answers the side conversation and talks over the real answer.'
+        },
+        duplex: {
+          agent: [[1.2, 1.5, 'Sure.'], [5.8, 6.8, 'Thank you.']],
+          verdict: ['good', 'The ideal: stays quiet. Most models do not, yet.'],
+          text: 'This is what a good model should do, not what most do today. Benchmarks with “user talking to others” and background speech find models are either responsive (react to everything) or floor-holding (ignore overlaps), and none does both well.'
+        },
+        human: {
+          agent: [[1.2, 1.5, 'Sure.'], [5.8, 6.8, 'Thank you.']],
+          verdict: ['good', 'Stays quiet.'],
+          text: 'People hear the change in voice, volume and direction and know the question was not for them.'
+        }
+      }
+    }
+  };
+
+  const tl = document.getElementById('tl');
+  if (tl) {
+    let scen = 'end', sys = 'cascade', raf = null;
+    const userTrack = document.getElementById('tl-user');
+    const agentTrack = document.getElementById('tl-agent');
+    const head = document.getElementById('tl-head');
+    const verdict = document.getElementById('tl-verdict');
+    const text = document.getElementById('tl-text');
+    const ticks = document.getElementById('tl-ticks');
+    for (let s = 0; s <= T_MAX; s++) {
+      const sp = document.createElement('span');
+      sp.style.left = (s / T_MAX * 100) + '%';
+      sp.textContent = s + ' s';
+      ticks.appendChild(sp);
+    }
+    function bar(track, b, who) {
+      const d = document.createElement('div');
+      d.className = 'tl-bar ' + (b[3] || who);
+      d.style.left = (b[0] / T_MAX * 100) + '%';
+      d.style.width = ((b[1] - b[0]) / T_MAX * 100) + '%';
+      d.dataset.t0 = b[0];
+      d.textContent = b[2];
+      d.title = b[2];
+      track.appendChild(d);
+    }
+    function draw(at) {
+      userTrack.textContent = '';
+      agentTrack.textContent = '';
+      const s = SCENARIOS[scen];
+      s.user.forEach((b) => bar(userTrack, b, 'user'));
+      s.systems[sys].agent.forEach((b) => bar(agentTrack, b, 'agent'));
+      reveal(at);
+      verdict.className = 'verdict ' + s.systems[sys].verdict[0];
+      verdict.textContent = s.systems[sys].verdict[1];
+      text.textContent = s.systems[sys].text;
+    }
+    function reveal(t) {
+      tl.querySelectorAll('.tl-bar').forEach((b) => b.classList.toggle('on', Number(b.dataset.t0) <= t));
+      head.style.left = 'calc(var(--nw) + 8px + (100% - var(--nw) - 8px) * ' + (t / T_MAX) + ')';
+    }
+    function play() {
+      cancelAnimationFrame(raf);
+      const t0 = performance.now();
+      const step = (now) => {
+        const t = Math.min(T_MAX, (now - t0) / 1000);
+        reveal(t);
+        if (t < T_MAX) raf = requestAnimationFrame(step);
+      };
+      raf = requestAnimationFrame(step);
+    }
+    function wire(id, set) {
+      document.querySelectorAll('#' + id + ' button').forEach((b) => b.addEventListener('click', () => {
+        document.querySelectorAll('#' + id + ' button').forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
+        set(b.dataset.v);
+        cancelAnimationFrame(raf);
+        draw(T_MAX);
+      }));
+    }
+    wire('tl-scen', (v) => { scen = v; });
+    wire('tl-sys', (v) => { sys = v; });
+    document.getElementById('tl-play').addEventListener('click', () => { draw(0); play(); });
+    draw(T_MAX);
+  }
+
+  /* ---------- Latency budget ---------- */
+  const budget = document.getElementById('budget');
+  if (budget) {
+    const parts = [
+      ['endpoint', 'var(--muted)'], ['asr', 'var(--user)'], ['llm', 'var(--second)'], ['tts', 'var(--ok)'], ['net', 'var(--bad)']
+    ];
+    const stack = document.getElementById('stack');
+    const total = document.getElementById('stack-total');
+    function update() {
+      let sum = 0;
+      stack.textContent = '';
+      const vals = parts.map(([id]) => {
+        const v = Number(document.getElementById('b-' + id).value);
+        document.getElementById('o-' + id).textContent = v + ' ms';
+        sum += v;
+        return v;
+      });
+      const scale = Math.max(sum, 2000);
+      parts.forEach(([id, c], i) => {
+        const d = document.createElement('div');
+        d.style.width = (vals[i] / scale * 100) + '%';
+        d.style.background = c;
+        d.textContent = vals[i] >= 120 ? id : '';
+        d.title = id + ': ' + vals[i] + ' ms';
+        stack.appendChild(d);
+      });
+      total.textContent = 'Cascade: ' + sum + ' ms from the end of speech to the first sound.  Human gap: ~200 ms.  Moshi: 160 ms in theory, ~200 ms measured.';
+    }
+    budget.querySelectorAll('input').forEach((i) => i.addEventListener('input', update));
+    update();
+  }
+
+  /* ---------- Moshi token grid ----------
+     One column per 80 ms frame. Moshi's own streams are generated;
+     the user's streams come from the microphone. */
+  const grid = document.getElementById('tgrid');
+  if (grid) {
+    const N = 12;
+    const text = ['·', '·', 'Hi', '·', 'there', '·', '·', 'how', 'can', 'I', 'help', '·'];
+    const speaks = [0, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1]; // audio lags its word slightly
+    const user = [0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0];   // a short "hello?" overlapping
+    let t = 0, delay = true;
+    function render() {
+      const rows = [
+        ['Text (inner monologue)', (i) => [text[i], 'txt']],
+        ['Moshi semantic (q1)', (i) => [speaks[i] ? 's' + i : 'sil', 'sem']],
+        ['Moshi acoustic (q2–q8)', (i) => {
+          const j = delay ? i - 1 : i;
+          if (j < 0) return ['', ''];
+          return [speaks[j] ? 'a' + j + '×7' : 'sil×7', 'ac'];
+        }],
+        null,
+        ['User semantic (q1)', (i) => [user[i] ? 'u' + i : 'sil', 'usem']],
+        ['User acoustic (q2–q8)', (i) => {
+          const j = delay ? i - 1 : i;
+          if (j < 0) return ['', ''];
+          return [user[j] ? 'u' + j + '×7' : 'sil×7', 'uac'];
+        }]
+      ];
+      let html = '<thead><tr><th></th>';
+      for (let i = 0; i < N; i++) html += '<th>' + (i * 80) + '</th>';
+      html += '</tr></thead><tbody>';
+      rows.forEach((r) => {
+        if (!r) { html += '<tr class="sep"><td colspan="' + (N + 1) + '"></td></tr>'; return; }
+        html += '<tr><th>' + r[0] + '</th>';
+        for (let i = 0; i < N; i++) {
+          const [v, c] = r[1](i);
+          const cls = [c, i > t ? 'future' : '', i === t ? 'now' : ''].join(' ');
+          html += '<td class="' + cls + '">' + v + '</td>';
+        }
+        html += '</tr>';
+      });
+      grid.innerHTML = html + '</tbody>';
+      const wrap = grid.parentNode, now = grid.querySelector('td.now');
+      if (now) wrap.scrollLeft = Math.max(0, now.offsetLeft - wrap.clientWidth / 2);
+      document.getElementById('tg-step').textContent = 'Frame ' + t + ' (' + (t * 80) + '–' + (t * 80 + 80) + ' ms)';
+    }
+    document.getElementById('tg-next').addEventListener('click', () => { t = (t + 1) % N; render(); });
+    document.getElementById('tg-prev').addEventListener('click', () => { t = (t - 1 + N) % N; render(); });
+    document.getElementById('tg-delay').addEventListener('change', (e) => { delay = e.target.checked; render(); });
+    render();
+  }
+
+  /* ---------- Slides ---------- */
+  const deck = document.getElementById('deck');
+  const slides = Array.from(deck.querySelectorAll('.slide'));
+  const jump = document.getElementById('jump');
+  const prev = document.getElementById('prev');
+  const next = document.getElementById('next');
+  const count = document.getElementById('count');
+  let index = 0;
+
+  let group = null;
+  slides.forEach((s, i) => {
+    if (!group || group.label !== s.dataset.part) {
+      group = document.createElement('optgroup');
+      group.label = s.dataset.part;
+      jump.appendChild(group);
+    }
+    group.appendChild(new Option(s.dataset.title, String(i)));
+  });
+  deck.classList.add('js');
+
+  function show(i, scroll) {
+    index = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((s, j) => { s.hidden = j !== index; });
+    count.textContent = (index + 1) + ' / ' + slides.length;
+    jump.value = String(index);
+    prev.disabled = index === 0;
+    next.disabled = index === slides.length - 1;
+    history.replaceState(null, '', '#' + slides[index].id);
+    if (scroll) deck.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
+
+  prev.addEventListener('click', () => show(index - 1, true));
+  next.addEventListener('click', () => show(index + 1, true));
+  jump.addEventListener('change', () => show(Number(jump.value), true));
+  document.addEventListener('keydown', (e) => {
+    if (e.altKey || e.ctrlKey || e.metaKey || /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
+    if (e.key === 'ArrowRight') show(index + 1);
+    else if (e.key === 'ArrowLeft') show(index - 1);
+  });
+
+  const first = slides.findIndex((s) => '#' + s.id === location.hash);
+  show(first < 0 ? 0 : first, first > 0);
+})();
+</script>
+</body>
+</html>
