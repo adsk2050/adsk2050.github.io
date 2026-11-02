@@ -49,6 +49,8 @@
   .slide code { font-family: var(--mono); font-size: 0.88em; }
   .ref { font-size: 0.85rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; margin-top: 16px !important; }
   .ref a { color: var(--muted); }
+  .refs { font-size: 0.85rem; padding-left: 1.6em; }
+  .refs li { margin-bottom: 6px; overflow-wrap: anywhere; }
   .listen { font-weight: 700; margin: 18px 0 8px !important; }
   .note { font-size: 0.9rem; color: var(--muted); }
 
@@ -239,7 +241,7 @@
       <p class="narration" id="tl-text"></p>
     </div>
     <p class="note">Dashed bars are silence where something is happening inside the system. Red bars are mistakes.</p>
-    <p class="ref">Timings follow typical values from: Stivers et al. 2009 (human gaps); <a href="https://arxiv.org/abs/2410.00037">Moshi</a> (duplex latency); <a href="https://arxiv.org/abs/2609.17360">ECHO</a> (backchannel over-yielding); <a href="https://arxiv.org/abs/2507.23159">Full-Duplex-Bench v1.5</a> (talking to others); <a href="https://arxiv.org/abs/2610.17124">D2</a> (interruption success).</p>
+    <p class="ref">Timings follow typical values from: Stivers et al. 2009 (human gaps); <a href="https://arxiv.org/abs/2410.00037">Moshi</a> (Défossez et al. 2024; duplex latency); <a href="https://arxiv.org/abs/2609.17360">ECHO</a> (Zhao et al. 2026; backchannel over-yielding); <a href="https://arxiv.org/abs/2507.23159">Full-Duplex-Bench v1.5</a> (Lin et al. 2025; talking to others); <a href="https://arxiv.org/abs/2610.17124">D2</a> (Chang et al. 2026; interruption success).</p>
   </section>
 
   <section class="slide" id="cascade" data-part="The problem" data-title="The cascade and its latency">
@@ -262,7 +264,7 @@
       <p class="stack-total" id="stack-total"></p>
     </div>
     <p>Production stacks fight this with tricks: a small learned turn detector instead of a fixed timer, starting the LLM before the turn is confirmed, streaming TTS in small chunks. These help, and they are why most shipped agents are still cascades. Full-duplex models attack the problem at the root: there is no pipeline to wait for.</p>
-    <p class="ref">Sources: <a href="https://arxiv.org/abs/2410.00037">Moshi</a> (160 ms theoretical, 200 ms practical); <a href="https://aclanthology.org/2025.iwsds-1.27">Castillo-L&oacute;pez et al. 2025</a> (deployed agents wait 700&ndash;1000 ms); <a href="https://github.com/pipecat-ai/smart-turn">Pipecat Smart Turn</a> and <a href="https://livekit.com/blog/using-a-transformer-to-improve-end-of-turn-detection">LiveKit turn detector</a> (learned end-of-turn).</p>
+    <p class="ref">Sources: <a href="https://arxiv.org/abs/2410.00037">Moshi</a> (Défossez et al. 2024; 160 ms theoretical, 200 ms practical); <a href="https://aclanthology.org/2025.iwsds-1.27">Castillo-L&oacute;pez et al. 2025</a> (deployed agents wait 700&ndash;1000 ms); <a href="https://github.com/pipecat-ai/smart-turn">Pipecat Smart Turn</a> (Défossez et al. 2024) and <a href="https://livekit.com/blog/using-a-transformer-to-improve-end-of-turn-detection">LiveKit turn detector</a> (learned end-of-turn).</p>
   </section>
 
   <section class="slide" id="tokens" data-part="Architecture" data-title="Speech as tokens">
@@ -283,7 +285,7 @@
       </tbody>
     </table></div>
     <p><strong>Why 12.5 Hz matters.</strong> Fewer frames per second means shorter sequences, so a 7B model can run a step every 80 ms and hold minutes of conversation in context. Semantic-only tokens need a separate decoder to become sound, usually flow matching to a spectrogram and then a HiFi-GAN vocoder. Mimi has its own decoder.</p>
-    <p class="ref">Sources: <a href="https://arxiv.org/abs/2410.00037">Moshi/Mimi</a>; <a href="https://arxiv.org/abs/2106.07447">HuBERT</a>; <a href="https://arxiv.org/abs/2210.13438">EnCodec</a>; <a href="https://arxiv.org/abs/2107.03312">SoundStream</a>; <a href="https://arxiv.org/abs/2308.16692">SpeechTokenizer</a>; <a href="https://arxiv.org/abs/2412.02612">GLM-4-Voice</a>; <a href="https://arxiv.org/abs/2412.10117">CosyVoice 2</a>.</p>
+    <p class="ref">Sources: <a href="https://arxiv.org/abs/2410.00037">Moshi/Mimi</a> (Défossez et al. 2024); <a href="https://arxiv.org/abs/2106.07447">HuBERT</a> (Hsu et al. 2021); <a href="https://arxiv.org/abs/2210.13438">EnCodec</a> (Défossez et al. 2022); <a href="https://arxiv.org/abs/2107.03312">SoundStream</a> (Zeghidour et al. 2021); <a href="https://arxiv.org/abs/2308.16692">SpeechTokenizer</a> (Zhang et al. 2023); <a href="https://arxiv.org/abs/2412.02612">GLM-4-Voice</a> (Zeng et al. 2024); <a href="https://arxiv.org/abs/2412.10117">CosyVoice 2</a> (Du et al. 2024).</p>
   </section>
 
   <section class="slide" id="families" data-part="Architecture" data-title="Two families of design">
@@ -296,7 +298,7 @@
       <li><strong>Learned synchronisation.</strong> One model sees both streams and outputs its own stream every frame. There is no &ldquo;turn&rdquo; anywhere in the code. Silence is just a run of silence tokens. Timing, overlap and backchannels come from the training data.</li>
     </ul>
     <p>Many models that sound duplex in demos are half-duplex in their papers: Qwen2.5-Omni, Qwen3-Omni, GLM-4-Voice, Mini-Omni and LLaMA-Omni all take turns. They are often the starting point that duplex work converts.</p>
-    <p class="ref">Sources: Chen and Yu, <a href="https://arxiv.org/abs/2509.14515">survey</a>; <a href="https://arxiv.org/abs/2411.00774">Freeze-Omni</a>; <a href="https://arxiv.org/abs/2501.06282">MinMo</a>; <a href="https://arxiv.org/abs/2408.05211">VITA</a>.</p>
+    <p class="ref">Sources: Chen and Yu, <a href="https://arxiv.org/abs/2509.14515">survey</a>; <a href="https://arxiv.org/abs/2411.00774">Freeze-Omni</a> (Wang et al. 2024); <a href="https://arxiv.org/abs/2501.06282">MinMo</a> (Chen et al. 2025); <a href="https://arxiv.org/abs/2408.05211">VITA</a> (Fu et al. 2024).</p>
   </section>
 
   <section class="slide" id="moshi" data-part="Architecture" data-title="Moshi, piece by piece">
@@ -312,7 +314,7 @@
       <li><strong>Acoustic delay.</strong> The acoustic tokens trail the semantic token by one frame, so the model knows what it is saying before it decides how it sounds.</li>
     </ul>
     <p><strong>Latency:</strong> one 80 ms frame plus the 80 ms acoustic delay gives 160 ms in theory. Kyutai reports about 200 ms in practice.</p>
-    <p class="ref">Source: D&eacute;fossez et al., <a href="https://arxiv.org/abs/2410.00037">Moshi: a speech-text foundation model for real-time dialogue</a>, 2024; <a href="https://github.com/kyutai-labs/moshi">code and weights</a>.</p>
+    <p class="ref">Source: D&eacute;fossez et al., <a href="https://arxiv.org/abs/2410.00037">Moshi: a speech-text foundation model for real-time dialogue</a> (Défossez et al. 2024), 2024; <a href="https://github.com/kyutai-labs/moshi">code and weights</a>.</p>
   </section>
 
   <section class="slide" id="frames" data-part="Architecture" data-title="Inside Moshi, frame by frame">
@@ -348,7 +350,7 @@
         <tr><td>PersonaPlex (2026)</td><td class="prose">Moshi&rsquo;s design, plus a prompt: a voice sample on the agent&rsquo;s audio channel and a role description on its text channel.</td></tr>
       </tbody>
     </table></div>
-    <p class="ref">Sources: <a href="https://arxiv.org/abs/2203.16502">dGSLM</a>; <a href="https://arxiv.org/abs/2409.15594">SyncLLM</a>; <a href="https://arxiv.org/abs/2410.17799">OmniFlatten</a>; <a href="https://arxiv.org/abs/2408.02622">LSLM</a>; <a href="https://arxiv.org/abs/2411.18138">SALMONN-omni</a>; <a href="https://arxiv.org/abs/2602.06053">PersonaPlex</a>.</p>
+    <p class="ref">Sources: <a href="https://arxiv.org/abs/2203.16502">dGSLM</a> (Nguyen et al. 2022); <a href="https://arxiv.org/abs/2409.15594">SyncLLM</a> (Veluri et al. 2024); <a href="https://arxiv.org/abs/2410.17799">OmniFlatten</a> (Zhang et al. 2024); <a href="https://arxiv.org/abs/2408.02622">LSLM</a> (Ma et al. 2024); <a href="https://arxiv.org/abs/2411.18138">SALMONN-omni</a> (Yu et al. 2024); <a href="https://arxiv.org/abs/2602.06053">PersonaPlex</a> (Roy et al. 2026).</p>
   </section>
 
   <section class="slide" id="io" data-part="Inputs and outputs" data-title="What goes in, what comes out">
@@ -373,7 +375,7 @@
         <tr><td>NemotronLabs VoiceChat</td><td class="prose">caller audio</td><td class="prose">speech + agent text + tool calls</td><td>full, learned</td></tr>
       </tbody>
     </table></div>
-    <p class="ref">Sources: <a href="https://arxiv.org/abs/2410.00037">Moshi</a>; <a href="https://arxiv.org/abs/2602.06053">PersonaPlex</a>; <a href="https://arxiv.org/abs/2409.15594">SyncLLM</a>; <a href="https://arxiv.org/abs/2411.00774">Freeze-Omni</a>; <a href="https://arxiv.org/abs/2501.06282">MinMo</a>; <a href="https://arxiv.org/abs/2509.17765">Qwen3-Omni</a>; <a href="https://arxiv.org/abs/2609.21967">NemotronLabs VoiceChat</a>.</p>
+    <p class="ref">Sources: <a href="https://arxiv.org/abs/2410.00037">Moshi</a> (Défossez et al. 2024); <a href="https://arxiv.org/abs/2602.06053">PersonaPlex</a> (Roy et al. 2026); <a href="https://arxiv.org/abs/2409.15594">SyncLLM</a> (Veluri et al. 2024); <a href="https://arxiv.org/abs/2411.00774">Freeze-Omni</a> (Wang et al. 2024); <a href="https://arxiv.org/abs/2501.06282">MinMo</a> (Chen et al. 2025); <a href="https://arxiv.org/abs/2509.17765">Qwen3-Omni</a> (Xu et al. 2025); <a href="https://arxiv.org/abs/2609.21967">NemotronLabs VoiceChat</a> (Balam et al. 2026).</p>
   </section>
 
   <section class="slide" id="recipe" data-part="Training" data-title="The training recipe">
@@ -390,7 +392,7 @@
       <li><strong>Timing rewards</strong> (2026, later papers). Reinforcement learning on when to speak, wait, backchannel or yield. See the slide after next.</li>
     </ol>
     <p>Other models follow the same shape. SyncLLM goes from turn-based synthetic speech, to duplex format with no overlap, to Fisher. OmniFlatten goes from speech recognition and TTS, to half-duplex, to full-duplex, removing the text streams one at a time.</p>
-    <p class="ref">Sources: <a href="https://arxiv.org/abs/2410.00037">Moshi</a>, section 4; <a href="https://arxiv.org/abs/2409.15594">SyncLLM</a>; <a href="https://arxiv.org/abs/2410.17799">OmniFlatten</a>.</p>
+    <p class="ref">Sources: <a href="https://arxiv.org/abs/2410.00037">Moshi</a> (Défossez et al. 2024), section 4; <a href="https://arxiv.org/abs/2409.15594">SyncLLM</a> (Veluri et al. 2024); <a href="https://arxiv.org/abs/2410.17799">OmniFlatten</a> (Zhang et al. 2024).</p>
   </section>
 
   <section class="slide" id="data" data-part="Training" data-title="Where the conversation data comes from">
@@ -405,7 +407,7 @@
       <li><strong>Separate real recordings.</strong> Pull each speaker out of podcasts with source separation (DuplexChat, about 415,000 hours of English and Japanese).</li>
     </ul>
     <p>Synthetic data is cheap and controllable, but it misses what makes real talk real: people matching each other&rsquo;s pace and pitch, long overlaps, and other voices in the room. The 2026 survey of the field calls open, real training data its main frontier. For Indian languages it is thinner still: Human-1, the first open Hindi duplex model, trained on 26,000 hours of real two-channel conversation collected for it.</p>
-    <p class="ref">Sources: <a href="https://catalog.ldc.upenn.edu/LDC97S62">Switchboard</a> and <a href="https://catalog.ldc.upenn.edu/LDC2004S13">Fisher</a> (LDC); <a href="https://arxiv.org/abs/2506.22554">Seamless Interaction</a>; <a href="https://arxiv.org/abs/2604.23295">Human-1</a>; <a href="https://arxiv.org/abs/2409.15594">SyncLLM</a>; <a href="https://arxiv.org/abs/2607.04941">DuplexChat</a>; <a href="https://arxiv.org/abs/2501.06282">MinMo</a>; <a href="https://arxiv.org/abs/2606.19453">2026 survey</a>.</p>
+    <p class="ref">Sources: <a href="https://catalog.ldc.upenn.edu/LDC97S62">Switchboard</a> and <a href="https://catalog.ldc.upenn.edu/LDC2004S13">Fisher</a> (LDC); <a href="https://arxiv.org/abs/2506.22554">Seamless Interaction</a> (Agrawal et al. 2025); <a href="https://arxiv.org/abs/2604.23295">Human-1</a> (Singh et al. 2026); <a href="https://arxiv.org/abs/2409.15594">SyncLLM</a> (Veluri et al. 2024); <a href="https://arxiv.org/abs/2607.04941">DuplexChat</a> (Nakata et al. 2026); <a href="https://arxiv.org/abs/2501.06282">MinMo</a> (Chen et al. 2025); <a href="https://arxiv.org/abs/2606.19453">2026 survey</a> (Lu et al. 2026).</p>
   </section>
 
   <section class="slide" id="rl" data-part="Training" data-title="Teaching timing with rewards">
@@ -424,7 +426,7 @@
       </tbody>
     </table></div>
     <p><strong>Smaller tricks that protect the content.</strong> Moshi down-weights the loss on acoustic tokens and on padding text tokens, so most of the learning goes into the words. Freeze-Omni keeps its text LLM frozen for the whole of training. GLM-4-Voice keeps text a few tokens ahead of speech so the words are decided first.</p>
-    <p class="ref">Also: <a href="https://arxiv.org/abs/2604.14920">Dual-Axis Generative Reward Model</a>; <a href="https://arxiv.org/abs/2610.12201">SteerablePlex</a>; <a href="https://arxiv.org/abs/2411.00774">Freeze-Omni</a>; <a href="https://arxiv.org/abs/2412.02612">GLM-4-Voice</a>.</p>
+    <p class="ref">Also: <a href="https://arxiv.org/abs/2604.14920">Dual-Axis Generative Reward Model</a> (Chen et al. 2026); <a href="https://arxiv.org/abs/2610.12201">SteerablePlex</a> (Zheng et al. 2026); <a href="https://arxiv.org/abs/2411.00774">Freeze-Omni</a> (Wang et al. 2024); <a href="https://arxiv.org/abs/2412.02612">GLM-4-Voice</a> (Zeng et al. 2024).</p>
   </section>
 
   <section class="slide" id="axes" data-part="Judging" data-title="Five things to measure">
@@ -442,7 +444,7 @@
       </tbody>
     </table></div>
     <p>The tension shows up in the numbers. On Full-Duplex-Bench, Moshi replies in 0.27 s but takes the turn in 98% of user pauses. Gemini Live waits through most pauses but takes 1.3 s to reply. Every benchmark also defines latency its own way, so latency numbers from different benchmarks cannot be compared.</p>
-    <p class="ref">Source: <a href="https://arxiv.org/abs/2503.04721">Full-Duplex-Bench v1</a>, 2025.</p>
+    <p class="ref">Source: <a href="https://arxiv.org/abs/2503.04721">Full-Duplex-Bench v1</a> (Lin et al. 2025), 2025.</p>
   </section>
 
   <section class="slide" id="timing" data-part="Judging" data-title="Timing: IPUs, pauses, gaps and overlaps">
@@ -479,7 +481,7 @@
       </tbody>
     </table></div>
     <p><strong>Human reference values.</strong> In ten languages, answers to yes/no questions start a mean 208 ms after the question ends; the most common offset is 0 ms. A single word takes about 600 ms to plan, so people plan their reply while the other person is still talking. In Switchboard, overlap is about 4% of the audio, and about 30% of turn changes happen in overlap.</p>
-    <p class="ref">Sources: <a href="https://arxiv.org/abs/2410.00037">Moshi</a>, Table 9 (seconds); <a href="https://arxiv.org/abs/2203.16502">dGSLM</a> (the definitions); <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC2705608/">Stivers et al. 2009</a>; <a href="https://www.frontiersin.org/articles/10.3389/fpsyg.2015.00731/full">Levinson and Torreira 2015</a>.</p>
+    <p class="ref">Sources: <a href="https://arxiv.org/abs/2410.00037">Moshi</a> (Défossez et al. 2024), Table 9 (seconds); <a href="https://arxiv.org/abs/2203.16502">dGSLM</a> (Nguyen et al. 2022; the definitions); <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC2705608/">Stivers et al. 2009</a> (Nguyen et al. 2022); <a href="https://www.frontiersin.org/articles/10.3389/fpsyg.2015.00731/full">Levinson and Torreira 2015</a>.</p>
   </section>
 
   <section class="slide" id="fdb" data-part="Judging" data-title="Full-Duplex-Bench: the reference test">
@@ -506,7 +508,7 @@
     </table></div>
     <svg class="diagram" viewBox="0 0 720 250" role="img" aria-label="Pause takeover rate against turn latency on Full-Duplex-Bench"><rect x="90" y="149" width="207.143" height="51" rx="4" class="d-ok-zone"/><text x="193.571" y="178.5" class="d-note">the goal</text><line x1="90" y1="200" x2="670" y2="200" class="d-line"/><line x1="90" y1="200" x2="90" y2="30" class="d-line"/><text x="90" y="216" class="d-note">0.0 s</text><text x="172.857" y="216" class="d-note">0.2 s</text><text x="255.714" y="216" class="d-note">0.4 s</text><text x="338.571" y="216" class="d-note">0.6 s</text><text x="421.429" y="216" class="d-note">0.8 s</text><text x="504.286" y="216" class="d-note">1.0 s</text><text x="587.143" y="216" class="d-note">1.2 s</text><text x="670" y="216" class="d-note">1.4 s</text><text x="82" y="204" class="d-note d-end">0.0</text><text x="82" y="119" class="d-note d-end">0.5</text><text x="82" y="34" class="d-note d-end">1.0</text><text x="380" y="238" class="d-small">Time to reply when a turn ends</text><text x="30" y="115" class="d-small" transform="rotate(-90 30 115)">Takes over in pauses</text><circle cx="200" cy="33" r="7" class="d-fill2"/><text x="188" y="37" class="d-small d-end">Moshi</text><circle cx="236" cy="41" r="7" class="d-fill2"/><text x="248" y="55" class="d-small d-start">dGSLM</text><circle cx="485" cy="118" r="7" class="d-fill2"/><text x="497" y="122" class="d-small d-start">Freeze-Omni</text><circle cx="629" cy="147" r="7" class="d-fill2"/><text x="641" y="151" class="d-small d-start">Gemini Live</text></svg>
     <p>Fast and eager on one side, slow and polite on the other. No model in the first round was both. Later models move toward the corner: PersonaPlex reports a 0.07 s turn latency on the same test.</p>
-    <p class="ref">Source: <a href="https://arxiv.org/abs/2503.04721">Full-Duplex-Bench v1</a>; <a href="https://github.com/DanielLin94144/Full-Duplex-Bench">code</a>. Pause numbers are on the Candor subset.</p>
+    <p class="ref">Source: <a href="https://arxiv.org/abs/2503.04721">Full-Duplex-Bench v1</a> (Lin et al. 2025); <a href="https://github.com/DanielLin94144/Full-Duplex-Bench">code</a>. Pause numbers are on the Candor subset.</p>
   </section>
 
   <section class="slide" id="fdb2" data-part="Judging" data-title="Overlap, multi-turn and tools">
@@ -519,7 +521,7 @@
     <p>gpt-realtime plays a caller with goals, at fast or slow pace. A judge LLM scores the transcript 1&ndash;5 on turn-taking, instruction following, corrections (&ldquo;no, I meant Tuesday&rdquo;), entity tracking and safety. Fast pace, corrections: GPT-Realtime 4.0, Moshi 2.9, Freeze-Omni 2.7.</p>
     <h3>v3: tool calls with real, messy speech</h3>
     <p>100 scenarios with five kinds of disfluency, such as self-corrections. <strong>Pass@1</strong> means every expected tool was called with every argument correct. GPT-Realtime is best at 0.60. A plain cascade takes a turn every time but needs 10 s per task.</p>
-    <p class="ref">Sources: <a href="https://arxiv.org/abs/2507.23159">v1.5</a>, <a href="https://arxiv.org/abs/2510.07838">v2</a>, <a href="https://arxiv.org/abs/2604.04847">v3</a>.</p>
+    <p class="ref">Sources: <a href="https://arxiv.org/abs/2507.23159">v1.5</a> (Lin et al. 2025), <a href="https://arxiv.org/abs/2510.07838">v2</a> (Lin et al. 2025), <a href="https://arxiv.org/abs/2604.04847">v3</a> (Lin et al. 2026).</p>
   </section>
 
   <section class="slide" id="judge" data-part="Judging" data-title="A judge trained on people">
@@ -536,7 +538,7 @@
     </ol>
     <p>Findings: systems often misjudge when to speak, interrupt too much, and almost never backchannel. Moshi rarely yields when interrupted.</p>
     <p>The newest benchmark in this style, <strong>TurnBench</strong> (2026), uses 30 hours of hand-labelled conversation. Its sharpest finding: people start talking a median 151 ms <em>before</em> the other person finishes. No system matches that without too many false starts.</p>
-    <p class="ref">Sources: <a href="https://arxiv.org/abs/2503.01174">Talking Turns</a>; <a href="https://arxiv.org/abs/2608.25218">TurnBench</a>.</p>
+    <p class="ref">Sources: <a href="https://arxiv.org/abs/2503.01174">Talking Turns</a> (Arora et al. 2025); <a href="https://arxiv.org/abs/2608.25218">TurnBench</a> (Jiang et al. 2026).</p>
   </section>
 
   <section class="slide" id="content" data-part="Judging" data-title="Is it still smart?">
@@ -561,7 +563,7 @@
       <li><strong>MMAU</strong> and <strong>AIR-Bench</strong>: understanding of speech, sounds and music.</li>
     </ul>
     <p>This is why 2026 methods such as DuplexPO and D2 put so much effort into keeping the base model&rsquo;s ability while teaching timing.</p>
-    <p class="ref">Sources: <a href="https://arxiv.org/abs/2410.00037">Moshi</a>; <a href="https://arxiv.org/abs/2410.17196">VoiceBench</a>; <a href="https://arxiv.org/abs/2502.17810">URO-Bench</a>; <a href="https://huggingface.co/datasets/ArtificialAnalysis/big_bench_audio">Big Bench Audio</a>; <a href="https://arxiv.org/abs/2406.13340">SD-Eval</a>; <a href="https://arxiv.org/abs/2410.19168">MMAU</a>; <a href="https://arxiv.org/abs/2402.07729">AIR-Bench</a>; <a href="https://arxiv.org/abs/2305.15255">Llama Questions</a>.</p>
+    <p class="ref">Sources: <a href="https://arxiv.org/abs/2410.00037">Moshi</a> (Défossez et al. 2024); <a href="https://arxiv.org/abs/2410.17196">VoiceBench</a> (Chen et al. 2024); <a href="https://arxiv.org/abs/2502.17810">URO-Bench</a> (Yan et al. 2025); <a href="https://huggingface.co/datasets/ArtificialAnalysis/big_bench_audio">Big Bench Audio</a>; <a href="https://arxiv.org/abs/2406.13340">SD-Eval</a> (Ao et al. 2024); <a href="https://arxiv.org/abs/2410.19168">MMAU</a> (Sakshi et al. 2024); <a href="https://arxiv.org/abs/2402.07729">AIR-Bench</a> (Yang et al. 2024); <a href="https://arxiv.org/abs/2305.15255">Llama Questions</a> (Nachmani et al. 2023).</p>
   </section>
 
   <section class="slide" id="quality" data-part="Judging" data-title="Does it sound right?">
@@ -578,7 +580,7 @@
       </tbody>
     </table></div>
     <p>Moshi reports its codec at 81.0 on MUSHRA against 90.6 for the real audio, and keeps its own voice in 98.7% of segments.</p>
-    <p class="ref">Sources: <a href="https://arxiv.org/abs/2410.00037">Moshi</a>; <a href="https://arxiv.org/abs/2204.02152">UTMOS</a>; <a href="https://arxiv.org/abs/2110.01763">DNSMOS P.835</a>; <a href="https://www.isca-archive.org/ssw_2023/kirkland23_ssw.html">Kirkland et al. 2023</a> on MOS.</p>
+    <p class="ref">Sources: <a href="https://arxiv.org/abs/2410.00037">Moshi</a> (Défossez et al. 2024); <a href="https://arxiv.org/abs/2204.02152">UTMOS</a> (Saeki et al. 2022); <a href="https://arxiv.org/abs/2110.01763">DNSMOS P.835</a> (Reddy et al. 2021); <a href="https://www.isca-archive.org/ssw_2023/kirkland23_ssw.html">Kirkland et al. 2023</a> on MOS.</p>
   </section>
 
   <section class="slide" id="benches" data-part="Judging" data-title="The other benchmarks">
@@ -596,7 +598,7 @@
         <tr><td><a href="https://arxiv.org/abs/2609.31948">Duplex-MPE</a></td><td class="prose">3&ndash;4 people and one assistant</td><td class="prose">Open models talk too often</td></tr>
         <tr><td><a href="https://arxiv.org/abs/2607.20460">Instruct-FD</a></td><td class="prose">Follow instructions like &ldquo;backchannel more&rdquo;</td><td class="prose">Best system: 64% adherence</td></tr>
         <tr><td><a href="https://arxiv.org/abs/2610.32349">FD-LHB</a></td><td class="prose">Long conversations</td><td class="prose">Every model degrades within minutes</td></tr>
-        <tr><td><a href="https://arxiv.org/abs/2603.13686">&tau;-Voice</a></td><td class="prose">Customer-service tasks by voice</td><td class="prose">Voice agents keep well under half of the text model&rsquo;s success</td></tr>
+        <tr><td><a href="https://arxiv.org/abs/2603.13686">&tau;-Voice</a></td><td class="prose">Customer-service tasks by voice</td><td class="prose">Voice agents reach 31&ndash;51% of tasks (26&ndash;38% with noise and accents) against 85% for GPT-5 in text</td></tr>
         <tr><td><a href="https://arxiv.org/abs/2605.13841">EVA-Bench</a></td><td class="prose">Task accuracy and caller experience together</td><td class="prose">No system above 0.5 on both</td></tr>
         <tr><td><a href="https://arxiv.org/abs/2512.14865">Audio MultiChallenge</a></td><td class="prose">452 real multi-turn spoken conversations</td><td class="prose">Best pass rate 55%</td></tr>
       </tbody>
@@ -609,12 +611,12 @@
     <ul>
       <li><strong>Transcript judges lose the sound.</strong> Most benchmarks transcribe the audio and ask a text LLM to score it. Timing, tone and hesitation disappear, and transcription errors leak into the score.</li>
       <li><strong>Audio judges have biases.</strong> Audio LLMs used as judges can agree well with human preference (0.91 Spearman in AudioJudge), but prefer longer answers and the first clip they hear.</li>
-      <li><strong>Static benchmarks miss what users want.</strong> In Talk Arena, 20 standard benchmarks explained only about 30% of what real users preferred in 7,500 conversations.</li>
+      <li><strong>Static benchmarks miss what users want.</strong> In Talk Arena (7,500 conversations, 484 people), no single standard benchmark tracked what users preferred well, and 20 of them combined explained only 30% of it (R&sup2; = 0.30).</li>
       <li><strong>MOS is not portable.</strong> A review of 133 TTS papers found MOS shifts with how the test is run.</li>
       <li><strong>Numbers are self-reported.</strong> Most results here are the authors&rsquo; own, on their own set-up, and latency depends on hardware and network.</li>
     </ul>
     <p>The test that matters is still a real conversation. Benchmarks are useful for finding specific failures, and weak at ranking systems overall.</p>
-    <p class="ref">Sources: <a href="https://arxiv.org/abs/2507.12705">AudioJudge</a>; <a href="https://arxiv.org/abs/2502.15919">Talk Arena</a>; <a href="https://www.isca-archive.org/ssw_2023/kirkland23_ssw.html">Kirkland et al. 2023</a>.</p>
+    <p class="ref">Sources: <a href="https://arxiv.org/abs/2507.12705">AudioJudge</a> (Manakul et al. 2025); <a href="https://arxiv.org/abs/2502.15919">Talk Arena</a> (Li et al. 2025); <a href="https://www.isca-archive.org/ssw_2023/kirkland23_ssw.html">Kirkland et al. 2023</a>.</p>
   </section>
 
   <section class="slide" id="history" data-part="Where it stands" data-title="A short history">
@@ -651,7 +653,7 @@
     </ul>
     <p>The link between them varies. NVIDIA&rsquo;s frontend-backend design has the speech model emit a <em>delegate</em> token and stream the transcript to a text LLM, then inject the result back; it reports 92&ndash;97% tool-call recall with turn-taking intact. SALMONN-duo learns when to answer itself and when to delegate. NemotronLabs VoiceChat and DuplexSLA go the other way and put tool calls on their own output stream inside one model.</p>
     <p>Related ideas: <strong>thinking while listening</strong> (reasoning during the user&rsquo;s turn, so it costs no extra time) and <strong>retrieval inside the frame budget</strong> (feeding retrieved text into a running model).</p>
-    <p class="ref">Sources: <a href="https://arxiv.org/abs/2609.19334">frontend-backend tool calls</a>; <a href="https://arxiv.org/abs/2609.34247">SALMONN-duo</a>; <a href="https://arxiv.org/abs/2609.21967">NemotronLabs VoiceChat</a>; <a href="https://arxiv.org/abs/2605.20755">DuplexSLA</a>; <a href="https://arxiv.org/abs/2510.05150">Chronological Thinking</a>; <a href="https://arxiv.org/abs/2510.06917">SHANKS</a>.</p>
+    <p class="ref">Sources: <a href="https://arxiv.org/abs/2609.19334">frontend-backend tool calls</a> (Hu et al. 2026); <a href="https://arxiv.org/abs/2609.34247">SALMONN-duo</a> (Yu et al. 2026); <a href="https://arxiv.org/abs/2609.21967">NemotronLabs VoiceChat</a> (Balam et al. 2026); <a href="https://arxiv.org/abs/2605.20755">DuplexSLA</a> (Zhang et al. 2026); <a href="https://arxiv.org/abs/2510.05150">Chronological Thinking</a> (Wu et al. 2025); <a href="https://arxiv.org/abs/2510.06917">SHANKS</a> (Chiang et al. 2025).</p>
   </section>
 
   <section class="slide" id="status" data-part="Where it stands" data-title="Solved, partly solved, open">
@@ -683,17 +685,101 @@
     <h2>What to read first</h2>
     <ol>
       <li>Chen and Yu, <a href="https://arxiv.org/abs/2509.14515">From Turn-Taking to Synchronous Dialogue</a> (2025). A short, clear map of designs and evaluation.</li>
-      <li><a href="https://arxiv.org/abs/2606.19453">A Survey of Full-Duplex Spoken Dialogue Systems</a> (2026). The newest survey, with a vocabulary for where decisions are made.</li>
-      <li>The <a href="https://arxiv.org/abs/2410.00037">Moshi paper</a> (2024). The design most open work builds on, and the clearest case against cascades.</li>
-      <li><a href="https://arxiv.org/abs/2503.04721">Full-Duplex-Bench</a> v1 and <a href="https://arxiv.org/abs/2507.23159">v1.5</a>. The behaviours, in measurable terms.</li>
-      <li><a href="https://arxiv.org/abs/2503.01174">Talking Turns</a> (ICLR 2025). How to judge timing with a model trained on human conversation.</li>
-      <li><a href="https://arxiv.org/abs/2411.13577">WavChat</a> and <a href="https://arxiv.org/abs/2504.08528">On the Landscape of Spoken Language Models</a>. Tokenisers, training and evaluation for speech LMs in general.</li>
-      <li><a href="https://arxiv.org/abs/2609.31967">IndicFDB</a> and <a href="https://arxiv.org/abs/2604.23295">Human-1</a>. The India-specific work: a ten-language benchmark and a Hindi duplex model.</li>
+      <li><a href="https://arxiv.org/abs/2606.19453">A Survey of Full-Duplex Spoken Dialogue Systems</a> (Lu et al. 2026; 2026). The newest survey, with a vocabulary for where decisions are made.</li>
+      <li>The <a href="https://arxiv.org/abs/2410.00037">Moshi paper</a> (Défossez et al. 2024; 2024). The design most open work builds on, and the clearest case against cascades.</li>
+      <li><a href="https://arxiv.org/abs/2503.04721">Full-Duplex-Bench</a> (Lin et al. 2025) v1 and <a href="https://arxiv.org/abs/2507.23159">v1.5</a> (Lin et al. 2025). The behaviours, in measurable terms.</li>
+      <li><a href="https://arxiv.org/abs/2503.01174">Talking Turns</a> (Arora et al. 2025; ICLR 2025). How to judge timing with a model trained on human conversation.</li>
+      <li><a href="https://arxiv.org/abs/2411.13577">WavChat</a> (Ji et al. 2024) and <a href="https://arxiv.org/abs/2504.08528">On the Landscape of Spoken Language Models</a> (Arora et al. 2025). Tokenisers, training and evaluation for speech LMs in general.</li>
+      <li><a href="https://arxiv.org/abs/2609.31967">IndicFDB</a> (Roy et al. 2026) and <a href="https://arxiv.org/abs/2604.23295">Human-1</a> (Singh et al. 2026). The India-specific work: a ten-language benchmark and a Hindi duplex model.</li>
     </ol>
     <p>The field moves fast. Over a hundred arXiv papers had &ldquo;full-duplex&rdquo; in the title in 2026 alone, so treat every number here as a snapshot from November 2026.</p>
     <p><a href="./index.html">&larr; Back to all posts</a></p>
   </section>
 
+  <section class="slide" id="refs" data-part="Where it stands" data-title="References">
+    <p class="kicker">The end &middot; References</p>
+    <h2>References</h2>
+    <p>Every paper cited in this post, by first author. arXiv dates are first versions; most 2025&ndash;2026 entries are preprints.</p>
+    <ol class="refs">
+      <li>Agrawal, V., Akinyemi, A., Alvero, K., et al. (2025). Seamless Interaction: Dyadic Audiovisual Motion Modeling and Large-Scale Dataset. <a href="https://arxiv.org/abs/2506.22554">arXiv:2506.22554</a></li>
+      <li>Ao, J., Wang, Y., Tian, X., et al. (2024). SD-Eval: A Benchmark Dataset for Spoken Dialogue Understanding Beyond Words. <a href="https://arxiv.org/abs/2406.13340">arXiv:2406.13340</a></li>
+      <li>Arora, S., Chang, K., Chien, C., et al. (2025). On The Landscape of Spoken Language Models: A Comprehensive Survey. <a href="https://arxiv.org/abs/2504.08528">arXiv:2504.08528</a></li>
+      <li>Arora, S., Lu, Z., Chiu, C., et al. (2025). Talking Turns: Benchmarking Audio Foundation Models on Turn-Taking Dynamics. <a href="https://arxiv.org/abs/2503.01174">arXiv:2503.01174</a></li>
+      <li>Balam, J., Bartley, T., Casanova, E., et al. (2026). NemotronLabs VoiceChat: An Open Full-duplex Speech-to-Speech Model with Tool Calling Capabilities. <a href="https://arxiv.org/abs/2609.21967">arXiv:2609.21967</a></li>
+      <li>Bogavelli, T., Melançon, G. G., Stankiewicz, K., et al. (2026). EVA-Bench: A New End-to-end Framework for Evaluating Voice Agents. <a href="https://arxiv.org/abs/2605.13841">arXiv:2605.13841</a></li>
+      <li>Castillo-L&oacute;pez, G., de Chalendar, G., Semmar, N. (2025). A survey of recent advances on turn-taking modeling in spoken dialogue systems. IWSDS. <a href="https://aclanthology.org/2025.iwsds-1.27">ACL Anthology</a></li>
+      <li>Chang, K., Hu, E., Kuan, C., et al. (2025). Game-Time: Evaluating Temporal Dynamics in Spoken Language Models. <a href="https://arxiv.org/abs/2509.26388">arXiv:2509.26388</a></li>
+      <li>Chang, C., Liu, A. H., Kingsbury, B., et al. (2026). D2: High-Capability Full-Duplex Spoken Language Models from Half-Duplex Backbones. <a href="https://arxiv.org/abs/2610.17124">arXiv:2610.17124</a></li>
+      <li>Chen, Y., Yue, X., Zhang, C., et al. (2024). VoiceBench: Benchmarking LLM-Based Voice Assistants. <a href="https://arxiv.org/abs/2410.17196">arXiv:2410.17196</a></li>
+      <li>Chen, Q., Chen, Y., Chen, Y., et al. (2025). MinMo: A Multimodal Large Language Model for Seamless Voice Interaction. <a href="https://arxiv.org/abs/2501.06282">arXiv:2501.06282</a></li>
+      <li>Chen, Y., Yu, H. (2025). From Turn-Taking to Synchronous Dialogue: A Survey of Full-Duplex Spoken Language Models. <a href="https://arxiv.org/abs/2509.14515">arXiv:2509.14515</a></li>
+      <li>Chen, Y., Ji, S., Liu, Z., et al. (2026). Dual-Axis Generative Reward Model Toward Semantic and Turn-taking Robustness in Interactive Spoken Dialogue Models. <a href="https://arxiv.org/abs/2604.14920">arXiv:2604.14920</a></li>
+      <li>Chiang, C., Wang, X., Li, L., et al. (2025). SHANKS: Simultaneous Hearing and Thinking for Spoken Language Models. <a href="https://arxiv.org/abs/2510.06917">arXiv:2510.06917</a></li>
+      <li>Cieri, C., Miller, D., Walker, K. (2004). The Fisher corpus: a resource for the next generations of speech-to-text. LREC. <a href="https://catalog.ldc.upenn.edu/LDC2004S13">LDC2004S13</a></li>
+      <li>Du, Z., Wang, Y., Chen, Q., et al. (2024). CosyVoice 2: Scalable Streaming Speech Synthesis with Large Language Models. <a href="https://arxiv.org/abs/2412.10117">arXiv:2412.10117</a></li>
+      <li>Défossez, A., Copet, J., Synnaeve, G., et al. (2022). High Fidelity Neural Audio Compression. <a href="https://arxiv.org/abs/2210.13438">arXiv:2210.13438</a></li>
+      <li>Défossez, A., Mazaré, L., Orsini, M., et al. (2024). Moshi: a speech-text foundation model for real-time dialogue. <a href="https://arxiv.org/abs/2410.00037">arXiv:2410.00037</a></li>
+      <li>Ekstedt, E., Skantze, G. (2020). TurnGPT: a Transformer-based Language Model for Predicting Turn-taking in Spoken Dialog. <a href="https://arxiv.org/abs/2010.10874">arXiv:2010.10874</a></li>
+      <li>Ekstedt, E., Skantze, G. (2022). Voice Activity Projection: Self-supervised Learning of Turn-taking Events. <a href="https://arxiv.org/abs/2205.09812">arXiv:2205.09812</a></li>
+      <li>Fang, Q., Guo, S., Feng, Y. (2026). BayLing-Duplex: Native Full-Duplex Speech Dialogue with a Single Autoregressive LLM. <a href="https://arxiv.org/abs/2606.14528">arXiv:2606.14528</a></li>
+      <li>Fu, C., Lin, H., Long, Z., et al. (2024). VITA: Towards Open-Source Interactive Omni Multimodal LLM. <a href="https://arxiv.org/abs/2408.05211">arXiv:2408.05211</a></li>
+      <li>Ge, Y., Chen, S., Xiao, J., et al. (2025). FLEXI: Benchmarking Full-duplex Human-LLM Speech Interaction. <a href="https://arxiv.org/abs/2509.22243">arXiv:2509.22243</a></li>
+      <li>Godfrey, J. J., Holliman, E. C., McDaniel, J. (1992). SWITCHBOARD: telephone speech corpus for research and development. ICASSP. <a href="https://catalog.ldc.upenn.edu/LDC97S62">LDC97S62</a></li>
+      <li>Gosai, A., Vuong, T., Tyagi, U., et al. (2025). Audio MultiChallenge: A Multi-Turn Evaluation of Spoken Dialogue Systems on Natural Human Interaction. <a href="https://arxiv.org/abs/2512.14865">arXiv:2512.14865</a></li>
+      <li>Hsiao, C., Lu, K., Fu, Y., et al. (2026). ASPIRin: Action Space Projection for Interactivity-Optimized Reinforcement Learning in Full-Duplex Speech Language Models. <a href="https://arxiv.org/abs/2604.10065">arXiv:2604.10065</a></li>
+      <li>Hsu, W., Bolte, B., Tsai, Y. H., et al. (2021). HuBERT: Self-Supervised Speech Representation Learning by Masked Prediction of Hidden Units. <a href="https://arxiv.org/abs/2106.07447">arXiv:2106.07447</a></li>
+      <li>Hu, K., Deng, S., Chen, C., et al. (2026). A frontend-backend architecture for tool calls in full-duplex speech models. <a href="https://arxiv.org/abs/2609.19334">arXiv:2609.19334</a></li>
+      <li>Ji, S., Chen, Y., Fang, M., et al. (2024). WavChat: A Survey of Spoken Dialogue Models. <a href="https://arxiv.org/abs/2411.13577">arXiv:2411.13577</a></li>
+      <li>Jiang, F., Sanabria, R., Deshmukh, S., et al. (2026). TurnBench: A Multi-Domain Benchmark for Turn-Taking Dynamics in Spoken Dialogue. <a href="https://arxiv.org/abs/2608.25218">arXiv:2608.25218</a></li>
+      <li>Jung, K., Park, H., Lee, Y., et al. (2026). HiPLEX: Hierarchical Policy Factorization for Full Duplex Speech Language Models. <a href="https://arxiv.org/abs/2610.07727">arXiv:2610.07727</a></li>
+      <li>Jurafsky, D., Shriberg, E., Biasca, D. (1997). Switchboard SWBD-DAMSL shallow-discourse-function annotation coders manual.</li>
+      <li>Kim, Y., Godiva, B., Park, S. J., et al. (2026). Why Full-Duplex Speech Models Collapse in Long Conversations. <a href="https://arxiv.org/abs/2610.32349">arXiv:2610.32349</a></li>
+      <li>Kirkland, A., Mehta, S., Lameris, H., et al. (2023). Stuck in the MOS pit: a critical analysis of MOS test methodology in TTS evaluation. SSW 12. <a href="https://www.isca-archive.org/ssw_2023/kirkland23_ssw.html">ISCA archive</a></li>
+      <li>Levinson, S. C., Torreira, F. (2015). Timing in turn-taking and its implications for processing models of language. <em>Frontiers in Psychology</em> 6. <a href="https://www.frontiersin.org/articles/10.3389/fpsyg.2015.00731/full">doi:10.3389/fpsyg.2015.00731</a></li>
+      <li>Li, M., Held, W. B., Ryan, M. J., et al. (2025). Mind the Gap! Static and Interactive Evaluations of Large Audio Models. <a href="https://arxiv.org/abs/2502.15919">arXiv:2502.15919</a></li>
+      <li>Li, Y., Wu, D., Lin, G., et al. (2026). Decoupling Conversational Dynamics in Full-Duplex Spoken Models through Reinforcement Learning. <a href="https://arxiv.org/abs/2607.07148">arXiv:2607.07148</a></li>
+      <li>Lin, G., Kuan, S. S., Shi, J., et al. (2025). Full-Duplex-Bench-v2: A Multi-Turn Evaluation Framework for Duplex Dialogue Systems with an Automated Examiner. <a href="https://arxiv.org/abs/2510.07838">arXiv:2510.07838</a></li>
+      <li>Lin, G., Lian, J., Li, T., et al. (2025). Full-Duplex-Bench: A Benchmark to Evaluate Full-duplex Spoken Dialogue Models on Turn-taking Capabilities. <a href="https://arxiv.org/abs/2503.04721">arXiv:2503.04721</a></li>
+      <li>Lin, G., Kuan, S. S., Wang, Q., et al. (2025). Full-Duplex-Bench v1.5: Evaluating Overlap Handling for Full-Duplex Speech Models. <a href="https://arxiv.org/abs/2507.23159">arXiv:2507.23159</a></li>
+      <li>Lin, G., Chen, C., Chen, Z., et al. (2026). Full-Duplex-Bench-v3: Benchmarking Tool Use for Full-Duplex Voice Agents Under Real-World Disfluency. <a href="https://arxiv.org/abs/2604.04847">arXiv:2604.04847</a></li>
+      <li>Lu, J., Wang, Y., Luo, J., et al. (2026). A Survey of Full-Duplex Spoken Dialogue Systems: Architectural Hierarchy, Interaction Ontology, and Decision State Machine. <a href="https://arxiv.org/abs/2606.19453">arXiv:2606.19453</a></li>
+      <li>Ma, Z., Song, Y., Du, C., et al. (2024). Language Model Can Listen While Speaking. <a href="https://arxiv.org/abs/2408.02622">arXiv:2408.02622</a></li>
+      <li>Ma, C., Feng, W., Jin, W., et al. (2026). Duplex-MPE: Benchmarking Multi-Party Interaction in Full-Duplex Dialogue. <a href="https://arxiv.org/abs/2609.31948">arXiv:2609.31948</a></li>
+      <li>Manakul, P., Gan, W. H., Ryan, M. J., et al. (2025). AudioJudge: Understanding What Works in Large Audio Model Based Speech Evaluation. <a href="https://arxiv.org/abs/2507.12705">arXiv:2507.12705</a></li>
+      <li>Nachmani, E., Levkovitch, A., Hirsch, R., et al. (2023). Spoken Question Answering and Speech Continuation Using Spectrogram-Powered LLM. <a href="https://arxiv.org/abs/2305.15255">arXiv:2305.15255</a></li>
+      <li>Nakata, W., Saito, Y., Saruwatari, H. (2026). DuplexChat: Constructing Speaker-Separated Full-Duplex Dialogue Speech at Scale for Spoken Dialogue Language Modeling. <a href="https://arxiv.org/abs/2607.04941">arXiv:2607.04941</a></li>
+      <li>Nguyen, T. A., Kharitonov, E., Copet, J., et al. (2022). Generative Spoken Dialogue Language Modeling. <a href="https://arxiv.org/abs/2203.16502">arXiv:2203.16502</a></li>
+      <li>Ohashi, A., Zeghidour, N., Défossez, A., et al. (2026). Multi-Faceted Interactivity Alignment in Full-Duplex Speech Models. <a href="https://arxiv.org/abs/2606.11167">arXiv:2606.11167</a></li>
+      <li>Peng, Y., Chao, Y., Ng, D., et al. (2025). FD-Bench: A Full-Duplex Benchmarking Pipeline Designed for Full Duplex Spoken Dialogue Systems. <a href="https://arxiv.org/abs/2507.19040">arXiv:2507.19040</a></li>
+      <li>Ray, S., Dhandhania, K., Barres, V., et al. (2026). τ-Voice: Benchmarking Full-Duplex Voice Agents on Real-World Domains. <a href="https://arxiv.org/abs/2603.13686">arXiv:2603.13686</a></li>
+      <li>Reddy, C. K. A., Gopal, V., Cutler, R. (2021). DNSMOS P.835: A Non-Intrusive Perceptual Objective Speech Quality Metric to Evaluate Noise Suppressors. <a href="https://arxiv.org/abs/2110.01763">arXiv:2110.01763</a></li>
+      <li>Roy, R., Raiman, J., Lee, S., et al. (2026). PersonaPlex: Voice and Role Control for Full Duplex Conversational Speech Models. <a href="https://arxiv.org/abs/2602.06053">arXiv:2602.06053</a></li>
+      <li>Roy, R., Banga, S., Raiman, J., et al. (2026). IndicFDB: Benchmarking Full-Duplex Voice Agents across Indian Languages. <a href="https://arxiv.org/abs/2609.31967">arXiv:2609.31967</a></li>
+      <li>Sacks, H., Schegloff, E. A., Jefferson, G. (1974). A simplest systematics for the organization of turn-taking for conversation. <em>Language</em> 50(4).</li>
+      <li>Saeki, T., Xin, D., Nakata, W., et al. (2022). UTMOS: UTokyo-SaruLab System for VoiceMOS Challenge 2022. <a href="https://arxiv.org/abs/2204.02152">arXiv:2204.02152</a></li>
+      <li>Sakshi, S., Tyagi, U., Kumar, S., et al. (2024). MMAU: A Massive Multi-Task Audio Understanding and Reasoning Benchmark. <a href="https://arxiv.org/abs/2410.19168">arXiv:2410.19168</a></li>
+      <li>Singh, B., Dhir, M., Banga, S., et al. (2026). Human-1 by Josh Talks: A Full-Duplex Conversational Modeling Framework in Hindi using Real-World Conversations. <a href="https://arxiv.org/abs/2604.23295">arXiv:2604.23295</a></li>
+      <li>Stivers, T., Enfield, N. J., Brown, P., et al. (2009). Universals and cultural variation in turn-taking in conversation. <em>PNAS</em> 106(26). <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC2705608/">PMC2705608</a></li>
+      <li>Tang, Y., Ma, W., Zhao, X., et al. (2026). Instruct-FD: Can Your Full-Duplex Speech System Follow Turn-Taking Instructions?. <a href="https://arxiv.org/abs/2607.20460">arXiv:2607.20460</a></li>
+      <li>Veluri, B., Peloquin, B. N., Yu, B., et al. (2024). Beyond Turn-Based Interfaces: Synchronous LLMs as Full-Duplex Dialogue Agents. <a href="https://arxiv.org/abs/2409.15594">arXiv:2409.15594</a></li>
+      <li>Wang, X., Li, Y., Fu, C., et al. (2024). Freeze-Omni: A Smart and Low Latency Speech-to-speech Dialogue Model with Frozen LLM. <a href="https://arxiv.org/abs/2411.00774">arXiv:2411.00774</a></li>
+      <li>Wu, D., Zhang, H., Chen, C., et al. (2025). Chronological Thinking in Full-Duplex Spoken Dialogue Language Models. <a href="https://arxiv.org/abs/2510.05150">arXiv:2510.05150</a></li>
+      <li>Xu, J., Guo, Z., Hu, H., et al. (2025). Qwen3-Omni Technical Report. <a href="https://arxiv.org/abs/2509.17765">arXiv:2509.17765</a></li>
+      <li>Yan, R., Li, X., Chen, W., et al. (2025). URO-Bench: Towards Comprehensive Evaluation for End-to-End Spoken Dialogue Models. <a href="https://arxiv.org/abs/2502.17810">arXiv:2502.17810</a></li>
+      <li>Yang, Q., Xu, J., Liu, W., et al. (2024). AIR-Bench: Benchmarking Large Audio-Language Models via Generative Comprehension. <a href="https://arxiv.org/abs/2402.07729">arXiv:2402.07729</a></li>
+      <li>Yu, W., Wang, S., Yang, X., et al. (2024). SALMONN-omni: A Codec-free LLM for Full-duplex Speech Understanding and Generation. <a href="https://arxiv.org/abs/2411.18138">arXiv:2411.18138</a></li>
+      <li>Yu, W., Wang, S., Chiba, T., et al. (2026). SALMONN-duo: Adaptive Dual-System Coordination for Full-Duplex Voice Agents. <a href="https://arxiv.org/abs/2609.34247">arXiv:2609.34247</a></li>
+      <li>Zeghidour, N., Luebs, A., Omran, A., et al. (2021). SoundStream: An End-to-End Neural Audio Codec. <a href="https://arxiv.org/abs/2107.03312">arXiv:2107.03312</a></li>
+      <li>Zeng, A., Du, Z., Liu, M., et al. (2024). GLM-4-Voice: Towards Intelligent and Human-Like End-to-End Spoken Chatbot. <a href="https://arxiv.org/abs/2412.02612">arXiv:2412.02612</a></li>
+      <li>Zhang, X., Zhang, D., Li, S., et al. (2023). SpeechTokenizer: Unified Speech Tokenizer for Speech Large Language Models. <a href="https://arxiv.org/abs/2308.16692">arXiv:2308.16692</a></li>
+      <li>Zhang, Q., Cheng, L., Deng, C., et al. (2024). OmniFlatten: An End-to-end GPT Model for Seamless Voice Conversation. <a href="https://arxiv.org/abs/2410.17799">arXiv:2410.17799</a></li>
+      <li>Zhang, H., Cui, W., Xu, H., et al. (2025). MTR-DuplexBench: Towards a Comprehensive Evaluation of Multi-Round Conversations for Full-Duplex Speech Language Models. <a href="https://arxiv.org/abs/2511.10262">arXiv:2511.10262</a></li>
+      <li>Zhang, H., Chen, J., Wu, D., et al. (2026). DuplexSLA: A Full-Duplex Spoken Language Model with Synchronized Speech, Language, and Action. <a href="https://arxiv.org/abs/2605.20755">arXiv:2605.20755</a></li>
+      <li>Zhao, S., Cai, H., Fan, W., et al. (2026). Same Words, Different Actions: Paired Turn-Taking Evaluation under Rewritten Dialogue Contexts. <a href="https://arxiv.org/abs/2609.17360">arXiv:2609.17360</a></li>
+      <li>Zheng, H., Züfle, M., Macháček, D., et al. (2026). SteerablePlex: Can We Steer Full-Duplex Models?. <a href="https://arxiv.org/abs/2610.12201">arXiv:2610.12201</a></li>
+      <li>Zhu, L., Lin, Y., Wang, Y., et al. (2026). Coupled but Late: Turn-Taking Between Full-Duplex Speech Models in Unscripted Dialogue. <a href="https://arxiv.org/abs/2610.08683">arXiv:2610.08683</a></li>
+    </ol>
+  </section>
 </div>
     </main>
     <footer class="site-footer">
